@@ -1,6 +1,8 @@
 """Calculate within-population metrics for diversity and selection.  Input is a tab delimited file with no header, containing Scaff, pos, ac, an, dp, and genotypes coded as 0-4. 
 Input file custom: Filename should end with _XXX_raw.table.recode.txt, where XXX is three-letter population abbreviation"""
 
+#Testing github
+
 import os, sys, subprocess, argparse,pandas,math,numpy
 from scipy import stats
 

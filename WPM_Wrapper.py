@@ -84,12 +84,12 @@ for pop in POP_names:
 					'#SBATCH -o '+oande+pop+'.gatk.out'+'\n'+
 					'#SBATCH -p nbi-long\n'+
 					'#SBATCH -n 1\n'+
-					'#SBATCH -t 2-5:00\n'+
+					'#SBATCH -t 0-4:00\n'+
 					'#SBATCH --mem=16000\n'+
 					'source GATK-3.6.0\n'+
-					'java -XX:ParallelGCThreads=2 -Xmx16g -jar /nbi/software/testing/GATK/3.6.0/src/GenomeAnalysisTK.jar -T SelectVariants -R /nbi/group-data/JIC/Levi-Yant/Lyrata_ref/alygenomes.fasta -V ' + args.V + vcf + sample_string1 +' -o ' + outdir + vcf_basenames[v] + '.' + pop + '.vcf\n'+
-					'java -XX:ParallelGCThreads=2 -Xmx16g -jar /nbi/software/testing/GATK/3.6.0/src/GenomeAnalysisTK.jar -T SelectVariants -R /nbi/group-data/JIC/Levi-Yant/Lyrata_ref/alygenomes.fasta -V ' + outdir + vcf_basenames[v] + '.' + pop + '.vcf --restrictAllelesTo BIALLELIC -env -o ' + outdir + vcf_basenames[v] + '.' + pop + '.bi.vcf\n'+
-					'java -XX:ParallelGCThreads=2 -Xmx16g -jar /nbi/software/testing/GATK/3.6.0/src/GenomeAnalysisTK.jar -T VariantsToTable -R /nbi/group-data/JIC/Levi-Yant/Lyrata_ref/alygenomes.fasta -V ' + outdir + vcf_basenames[v] + '.' + pop+'.bi.vcf -F CHROM -F POS -F AC -F AN -F DP -GF GT -o ' + outdir + vcf_basenames[v] + '.' + pop + '_raw.table\n')
+					'java -Xmx16g -jar /nbi/software/testing/GATK/3.6.0/src/GenomeAnalysisTK.jar -T SelectVariants -R /nbi/group-data/JIC/Levi-Yant/Lyrata_ref/alygenomes.fasta -V ' + args.V + vcf + sample_string1 +' -o ' + outdir + vcf_basenames[v] + '.' + pop + '.vcf\n'+
+					'java -Xmx16g -jar /nbi/software/testing/GATK/3.6.0/src/GenomeAnalysisTK.jar -T SelectVariants -R /nbi/group-data/JIC/Levi-Yant/Lyrata_ref/alygenomes.fasta -V ' + outdir + vcf_basenames[v] + '.' + pop + '.vcf --restrictAllelesTo BIALLELIC -env -o ' + outdir + vcf_basenames[v] + '.' + pop + '.bi.vcf\n'+
+					'java -Xmx16g -jar /nbi/software/testing/GATK/3.6.0/src/GenomeAnalysisTK.jar -T VariantsToTable -R /nbi/group-data/JIC/Levi-Yant/Lyrata_ref/alygenomes.fasta -V ' + outdir + vcf_basenames[v] + '.' + pop+'.bi.vcf -F CHROM -F POS -F AC -F AN -F DP -GF GT -o ' + outdir + vcf_basenames[v] + '.' + pop + '_raw.table\n')
 
 
 		if args.K == 'false':
@@ -127,7 +127,7 @@ for pop in POP_names:
 					'#SBATCH -o '+oande+pop+'.cat.out'+'\n'+
 					'#SBATCH -p nbi-long\n'+
 					'#SBATCH -n 1\n'+
-					'#SBATCH -t 2-5:00\n'+
+					'#SBATCH -t 0-12:00\n'+
 					'#SBATCH --mem=32000\n'+
 					'cat ' + outdir + '*'+ pop + '_raw.table > ' + outdir1 + pop + '.table\n'+
 					'rm -r ' + outdir + '\n')
@@ -155,7 +155,7 @@ for pop in POP_names:
 					'#SBATCH -o '+oande+pop+'.recode012.out'+'\n'+
 					'#SBATCH -p nbi-long\n'+
 					'#SBATCH -n 1\n'+
-					'#SBATCH -t 2-5:00\n'+
+					'#SBATCH -t 1-00:00\n'+
 					'#SBATCH --mem=32000\n'+
 					'source python-3.5.1\n'+
 					'source env/bin/activate\n'+
@@ -184,7 +184,7 @@ for pop in POP_names:
 					'#SBATCH -o '+oande+pop+'.wpm.out'+'\n'+
 					'#SBATCH -p nbi-long\n'+
 					'#SBATCH -n 1\n'+
-					'#SBATCH -t 2-5:00\n'+
+					'#SBATCH -t 1-00:00\n'+
 					'#SBATCH --mem=32000\n'+
 					'source python-3.5.1\n'+
 					'source env/bin/activate\n'+
