@@ -147,7 +147,7 @@ for contrast in contrast_names:
 
 		for v,vcf in enumerate(vcf_list):
 
-			
+			#THIS MAY HAVE MESSED UP THE FINAL STEP BY RENAMING SHELL SCRIPTS...SBATCH AT END NEEDS TO WAIT FOR ALL JOBS NAMED CONTRAST.SH TO END.
 			shfile1 = open('vcf'+str(v)+'.group1.sh','w')
 			shfile1.write('#!/bin/bash\n'+
 						'#SBATCH -J GS.'+contrast+'.sh'+'\n'+

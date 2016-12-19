@@ -1,0 +1,5 @@
+VCF Directory = /Users/patrick/Documents/Research/code/GenomeScan/
+Window size in bp = 20000
+Minimum number of SNPs per window  = 10
+Minimum average depth per individual  = 10
+Proportion missing data allowed = 0.2

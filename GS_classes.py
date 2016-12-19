@@ -50,9 +50,6 @@ class G1():
                     tincoh2.append(dirName+'/'+fname)
         incoh1 = natsorted(tincoh1)
         incoh2 = natsorted(tincoh2)
-
-        print(incoh1)
-        print(incoh2)
                                     
         # paste cohort 1 & cohort 2 into a table next to each other & remove CHROM POS from second cohort in joint table
         # yields: CHROM POS AC AN DP AC AN DP
@@ -70,7 +67,7 @@ class G1():
             p = subprocess.Popen(cmd, shell=True)
             sts = os.waitpid(p.pid, 0)[1]
 
-            os.remove('paste_'+args.coh1+'_'+args.coh2+'.unix') # removes unix script file from folder
+        os.remove('paste_'+args.coh1+'_'+args.coh2+'.unix') # removes unix script file from folder
 
         # variables to be inherited
         self.outputdir = outputdir
@@ -176,13 +173,13 @@ class G1():
         if args.o is 'na':
             outputdir = str(args.coh1+args.coh2)
         else:
-            outputdir = str(args.o)+"output/"
+            outputdir = str(args.o+args.coh1+args.coh2)
 
         contrast = args.coh1 + args.coh2
         self.outputdir = outputdir
         self.contrast = contrast
         print('\n\tSTEP 4: Calculate Dxy, Fst, DD')
-        header = 'scaffold\tstart\tend\tmidpoint\tlength\tnum_snps\t'+args.coh1+'_freq\t'+args.coh2+'_freq\tabsdiff\t'+args.coh1+'_'+args.coh2+'\t'+args.coh2+'_'+args.coh1+'\tvaru\t'+args.coh1+'_Ehet\t'+args.coh2+'_Ehet\tThetaW_'+args.coh1+'\tThetaW_'+args.coh2+'\tPi_'+args.coh1+'\tPi_'+args.coh2+'\tThetaH_'+args.coh1+'\tThetaH_'+args.coh2+'\tThetaL_'+args.coh1+'\tThetaL_'+args.coh2+'\tD_'+args.coh1+'\tD_'+args.coh2+'\tH_'+args.coh1+'\tH_'+args.coh2+'\tE_'+args.coh1+'\tE_'+args.coh2+'\tFst\tDxy\n'
+        header = 'scaffold\tstart\tend\tmidpoint\tlength\tnum_snps\t'+args.coh1+'_freq\t'+args.coh2+'_freq\tabsdiff\t'+args.coh1+'_'+args.coh2+'\t'+args.coh2+'_'+args.coh1+'\tvaru\t'+args.coh1+'_pi\t'+args.coh2+'_pi\tFst\tDxy\n'
         with open(outputdir+'/'+contrast+'_metrics_WG_'+str(args.snps)+'SNPs'+args.suf+'.txt','w') as outfile:
             outfile.write(header)
 
@@ -325,25 +322,10 @@ class G1():
                             absdiff=[]
                             c1_minus_c2 = []
                             c2_minus_c1 = []
-                            c1_Ehet = []
-                            c2_Ehet = []
-                            c1_TW = [] 
-                            c2_TW = []
-                            c1_TH = []
-                            c2_TH = []
-                            c1_TL = []
-                            c2_TL = []
                             c1_pi = []
                             c2_pi = []
-                            c1_D = []
-                            c2_D = []
-                            c1_H = []
-                            c2_H = []
-                            c1_E = []
-                            c2_E = []
                             fst = []
                             dxy = []
-
 
                             win_afs1=[0 for cat in range(0,AN1)]
                             win_afs2=[0 for cat in range(0,AN2)]
@@ -355,32 +337,26 @@ class G1():
                                 pos = int(data[1])
                                 allele_c1_count = int(data[2])
                                 allele_c2_count = int(data[4])
-                                an1=int(data[3])
-                                an2=int(data[5])
-                                allele_c1_freq = allele_c1_count/an1
-                                allele_c2_freq = allele_c2_count/an2
+                                allele_c1_freq = allele_c1_count/int(data[3])
+                                allele_c2_freq = allele_c2_count/int(data[5])
                                 allele_count = allele_c1_count + allele_c2_count
-#                                allele_freq = allele_count/(int(data[3]) + int(data[5])) #I don't think this is the right way to calculate allele frequencies.  they should not be waited by sample Size!!
-                                allele_freq = (allele_c1_freq + allele_c2_freq)/2
+                                allele_freq = allele_count/(int(data[3]) + int(data[5]))
 
-                                if pos > start and pos <=end and an1>=AN1 and an2>=AN2: #Missingness filter applied to both populations separately
-
+                                if pos > start and pos <=end:
                                     snp_count+=1
-                                    ac1=np.random.binomial(AN1,allele_c1_freq,1)[0]
-                                    ac2=np.random.binomial(AN2,allele_c2_freq,1)[0]
-                                    win_afs1[ac1] += 1
-                                    win_afs2[ac2] += 1
-                                    win_afs12[ac1,ac2]+=1
-                                    AFS1[ac1] += 1
-                                    AFS2[ac2] += 1
-                                    AFS12[ac1,ac2]+=1
+                                    win_afs1[allele_c1_count] += 1
+                                    win_afs2[allele_c2_count] += 1
+                                    win_afs12[allele_c1_count,allele_c2_count]+=1
+                                    AFS1[allele_c1_count] += 1
+                                    AFS2[allele_c2_count] += 1
+                                    AFS12[allele_c1_count,allele_c2_count]+=1
                                     c1_freq.append(allele_c1_freq)
                                     c2_freq.append(allele_c2_freq)
                                     c1_minus_c2.append(allele_c1_freq - allele_c2_freq)
                                     c2_minus_c1.append(allele_c2_freq - allele_c1_freq)
                                     absdiff.append(max([allele_c1_freq-allele_c2_freq, allele_c2_freq-allele_c1_freq]))
-                                    c1_Ehet.append((2*allele_c1_freq*(1-allele_c1_freq)))    
-                                    c2_Ehet.append((2*allele_c2_freq*(1-allele_c2_freq)))
+                                    c1_pi.append((2*allele_c1_freq*(1-allele_c1_freq)))    
+                                    c2_pi.append((2*allele_c2_freq*(1-allele_c2_freq)))
                                     ht = 2*allele_freq*(1-allele_freq)
                                     h1 = 2*allele_c1_freq*(1-allele_c1_freq)
                                     h2 = 2*allele_c2_freq*(1-allele_c2_freq)
@@ -396,40 +372,20 @@ class G1():
 
 
                                 elif pos > end:
-                                    #header = 'scaffold\tstart\tend\tmidpoint\tlength\tnum_snps\t'+args.coh1+'_freq\t'+args.coh2+'_freq\tabsdiff\t'+args.coh1+'_'+args.coh2+'\t'+args.coh2+'_'+args.coh1+'\tvaru\t'+args.coh1+'_Ehet\t'+args.coh2+'_Ehet\tThetaW_'+args.coh1+'\tThetaW_'+args.coh2+'\tPi_'+args.coh1+'\tPi_'+args.coh2+'\tThetaH_'+args.coh1+'\tThetaH_'+args.coh2+'\tThetaL_'+args.coh1+'\tThetaL_'+args.coh2+'\tD_'+args.coh1+'\tD_'+args.coh2+'\tH_'+args.coh1+'\tH_'+args.coh2+'\tE_'+args.coh1+'\tE_'+args.coh2+'\tFst\tDxy\n'
-                
                                     Snp_counts[idx]=snp_count
-                                    pi1=0.0
-                                    pi2=0.0
-                                    w1=0.0
-                                    w2=0.0
-                                    h1=0.0
-                                    h2=0.0
-                                    e1=0.0
-                                    e2=0.0
-                                    for ix,x in enumerate(win_afs1):
-                                        pi1+=
-
-                                    pi2=
-                                    #TO DO: CALCULATE AFS STATISTICS, FORMAT OUTPUT SUCH THAT IT MATCHES HEADER.
-                                    #NEED TO REWORK PIPELINE TO HANDLE INDIVIDUAL DATA.  MAKE SEPARATE PROGRAM TO BE IMPORTED AS MODULE THAT TAKES IN INDIVIDUAL DATA FROM SINGLE POPULATION AND OUTPUTS WITHIN POPULATION METRICS.  
                                     if snp_count >= args.ms:
                                             outfile.write(scaf[0]+'\t'+
                                             str(start)+'\t'+
                                             str(end)+'\t'+
-                                            str(wmid)+'\t'+
-                                            str(args.ws)+'\t'+
-                                            str(snp_count)+'\t'+
-                                            str(statistics.mean(c1_freq))+'\t'+
-                                            str(statistics.mean(c2_freq))+'\t'+
-                                            str(statistics.mean(absdiff))+'\t'+
-                                            str(statistics.mean(c1_minus_c2))+'\t'+
-                                            str(statistics.mean(c2_minus_c1))+'\t'+
-                                            str(statistics.mean(c1_Ehet))+'\t'+
-                                            str(statistics.mean(c2_Ehet))+'\t'+
-                                            str('-99\t') #supposed to be mean varu
-                                            str(statistics.mean(fst))+'\t'+
-                                            str((1/snp_count)*sum_dxy)+'\t') #mean Dxy
+                                            str(mean_c1_freq)+'\t'+
+                                            str(mean_c2_freq)+'\t'+
+                                            str(mean_absdiff)+'\t'+
+                                            str(mean_c1_minus_c2)+'\t'+
+                                            str(mean_c2_minus_c1)+'\t'+
+                                            str(mean_c1_pi)+'\t'+
+                                            str(mean_c2_pi)+'\t'+
+                                            str(mean_fst)+'\t'+
+                                            str(win_dxy)+'\n')
                                     else:
                                         winexclcount +=1
 
@@ -442,22 +398,8 @@ class G1():
                                     absdiff=[]
                                     c1_minus_c2 = []
                                     c2_minus_c1 = []
-                                    c1_Ehet = []
-                                    c2_Ehet = []
-                                    c1_TW = [] 
-                                    c2_TW = []
-                                    c1_TH = []
-                                    c2_TH = []
-                                    c1_TL = []
-                                    c2_TL = []
                                     c1_pi = []
                                     c2_pi = []
-                                    c1_D = []
-                                    c2_D = []
-                                    c1_H = []
-                                    c2_H = []
-                                    c1_E = []
-                                    c2_E = []
                                     fst = []
                                     dxy = []
 
@@ -470,14 +412,12 @@ class G1():
                                     assert (pos < end and pos > start)
 
                                     snp_count=1
-                                    ac1=np.random.binomial(AN1,allele_c1_freq,1)[0]
-                                    ac2=np.random.binomial(AN2,allele_c2_freq,1)[0]
-                                    win_afs1[ac1] += 1
-                                    win_afs2[ac2] += 1
-                                    win_afs12[ac1,ac2]+=1
-                                    AFS1[ac1] += 1
-                                    AFS2[ac2] += 1
-                                    AFS12[ac1,ac2]+=1
+                                    win_afs1[allele_c1_count] += 1
+                                    win_afs2[allele_c2_count] += 1
+                                    win_afs12[allele_c1_count,allele_c2_count]+=1
+                                    AFS1[allele_c1_count] += 1
+                                    AFS2[allele_c2_count] += 1
+                                    AFS12[allele_c1_count,allele_c2_count]+=1
                                     c1_freq.append(allele_c1_freq)
                                     c2_freq.append(allele_c2_freq)
                                     c1_minus_c2.append(allele_c1_freq - allele_c2_freq)
@@ -548,7 +488,7 @@ class G1():
         if args.o is 'na':
             outputdir = str(args.coh1+args.coh2)
         else:
-            outputdir = str(args.o)+"output/"
+            outputdir = str(args.o+args.coh1+args.coh2)
 
         contrast = args.coh1 + args.coh2
         self.outputdir = outputdir
@@ -900,7 +840,7 @@ class G1():
         if args.o is 'na':
             outputdir = str(args.coh1+args.coh2)
         else:
-            outputdir = str(args.o)+"output/"
+            outputdir = str(args.o+args.coh1+args.coh2)
 
         contrast = args.coh1 + args.coh2
         args = self.args
