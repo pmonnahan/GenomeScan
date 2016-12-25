@@ -82,7 +82,7 @@ for pop in POP_names:
 					'#SBATCH -J ' +pop +'.sh'+'\n'+
 					'#SBATCH -e '+oande+pop+'.gatk.err'+'\n'+
 					'#SBATCH -o '+oande+pop+'.gatk.out'+'\n'+
-					'#SBATCH -p nbi-long\n'+
+					'#SBATCH -p nbi-medium\n'+
 					'#SBATCH -n 1\n'+
 					'#SBATCH -t 0-4:00\n'+
 					'#SBATCH --mem=16000\n'+
@@ -159,7 +159,7 @@ for pop in POP_names:
 					'#SBATCH --mem=32000\n'+
 					'source python-3.5.1\n'+
 					'source env/bin/activate\n'+
-					'python3 /nbi/Research-Groups/JIC/Levi-Yant/Patrick/code/recode012.py -i ' + outdir1 + pop + '.table -mf ' + str(1.0 - args.M) + ' -dp ' + args.DP + ' -o ' + outdir1 +'\n'
+					'python3 /usr/users/JIC_c1/monnahap/GenomeScan/recode012.py -i ' + outdir1 + pop + '.table -mf ' + str(1.0 - args.M) + ' -dp ' + args.DP + ' -o ' + outdir1 +'\n'
 					'rm ' + outdir1 + pop + '.table')
 	shfile3.close()
 
@@ -188,7 +188,7 @@ for pop in POP_names:
 					'#SBATCH --mem=32000\n'+
 					'source python-3.5.1\n'+
 					'source env/bin/activate\n'+
-					'python3 /nbi/Research-Groups/JIC/Levi-Yant/Patrick/code/wpm.py -i '+ outdir1 + pop + '.recode.txt -pop ' + pop + ' -o ' + outdir1 + ' -m ' + str(args.M) + ' -ws ' + args.WS + ' -ms ' + args.MS + '\n'+
+					'python3 /usr/users/JIC_c1/monnahap/GenomeScan/wpm.py -i '+ outdir1 + pop + '.recode.txt -pop ' + pop + ' -o ' + outdir1 + ' -m ' + str(args.M) + ' -ws ' + args.WS + ' -ms ' + args.MS + '\n'+
 					'rm ' + outdir1 + pop + '.recode.txt')
 	shfile3.close()
 
