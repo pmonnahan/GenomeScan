@@ -129,7 +129,7 @@ for pop in POP_names:
 					'#SBATCH -n 1\n'+
 					'#SBATCH -t 0-12:00\n'+
 					'#SBATCH --mem=32000\n'+
-					'cat ' + outdir + '*'+ pop + '_raw.table > ' + outdir1 + pop + '.table\n'+
+					'cat ' + outdir + '*'+ pop + '_raw.table | tail -n+2 > ' + outdir1 + pop + '.table\n'+
 					'rm -r ' + outdir + '\n')
 	shfile3.close()
 

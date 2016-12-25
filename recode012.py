@@ -21,14 +21,11 @@ with open(args.i,"rU") as table:
 	GTfile=open(args.o+filename+".recode.txt","w")
 	numsites=0
 	for i,line in enumerate(table):
-		if i==0:
-			line=line.strip("\n")
-			line=line.split("\t")
-			numind=len(line[5:])
-		if i>0:
+		if line[0].split("_")[0]=='scaffold':
 			ref='0'
 			line=line.strip("\n")
 			line=line.split("\t")
+			numind=len(line[5:])
 			scaff = line[0]
 			pos=line[1]
 			ac=line[2]
