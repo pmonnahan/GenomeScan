@@ -130,7 +130,7 @@ for pop in POP_names:
 					'#SBATCH -t 0-12:00\n'+
 					'#SBATCH --mem=32000\n'+
 					'cat ' + outdir + '*'+ pop + '_raw.table | tail -n+2 > ' + outdir1 + pop + '.table\n')
-	if args.K == false:
+	if args.K == 'false':
 		shfile3.write('rm -r ' + outdir + '\n')
 	shfile3.close()
 
@@ -161,7 +161,7 @@ for pop in POP_names:
 					'source python-3.5.1\n'+
 					'source env/bin/activate\n'+
 					'python3 /usr/users/JIC_c1/monnahap/GenomeScan/recode012.py -i ' + outdir1 + pop + '.table -mf ' + str(1.0 - args.M) + ' -dp ' + args.DP + ' -o ' + outdir1 +'\n')
-	if args.K == false:	
+	if args.K == 'false':	
 		shfile3.write('rm ' + outdir1 + pop + '.table')
 	shfile3.close()
 
@@ -191,7 +191,7 @@ for pop in POP_names:
 					'source python-3.5.1\n'+
 					'source env/bin/activate\n'+
 					'python3 /usr/users/JIC_c1/monnahap/GenomeScan/wpm.py -i '+ outdir1 + pop + '.recode.txt -pop ' + pop + ' -o ' + outdir1 + ' -m ' + str(args.M) + ' -ws ' + args.WS + ' -ms ' + args.MS + '\n')
-	if args.K == false:
+	if args.K == 'false':
 		shfile3.write('rm ' + outdir1 + pop + 'table.recode.txt')
 	shfile3.close()
 

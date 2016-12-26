@@ -23,6 +23,7 @@ with open(args.i,"rU") as table:
 	for i,line in enumerate(table):
 		line=line.strip("\n")
 		line=line.split("\t")
+		print(line[0].split("_")[0])
 		if line[0].split("_")[0]=='scaffold':
 			ref='0'
 			numind=len(line[5:])
