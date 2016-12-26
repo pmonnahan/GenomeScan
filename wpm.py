@@ -99,7 +99,7 @@ def calcwpm(input_file,output,popname="pop",missingness = 0.1,window_size = 5000
 					H = (Pi - L)/(varPi_L**0.5) #Normalized H according to Zeng 2006
 					E = (L - W)/(varL_W**0.5)
 
-					out1.write(popname+'\t'scaff+'\t'+
+					out1.write(popname+'\t'+scaff+'\t'+
 					str(start)+'\t'+
 					str(end)+'\t'+
 					str(window_size)+'\t'+

@@ -12,7 +12,7 @@ parser.add_argument('-DP', type=str, metavar='Minimum_Depth',required=False,defa
 parser.add_argument('-M', type=float, metavar='Missingness',required=False,default='0.0',help='Proportion of missing individuals allowed in each group')
 parser.add_argument('-P1', type=str, metavar='Print_VCF_Commands', required=False, default='false', help='if true then print shell script to screen')
 parser.add_argument('-P2', type=str, metavar='Print_GS_Commands', required=False, default='false', help='if true then print shell script to screen')
-parser.add_argument('-K', type=str, metavar='Keep_vcf_files',required=False,default='false',help='Do you want to keep the split vcf files?')
+parser.add_argument('-K', type=str, metavar='Keep_files',required=False,default='false',help='Do you want to keep the all output files?')
 parser.add_argument('-O', type=str, metavar='output_directory',required=True,help='Output Directory')
 
 args = parser.parse_args()
@@ -129,8 +129,9 @@ for pop in POP_names:
 					'#SBATCH -n 1\n'+
 					'#SBATCH -t 0-12:00\n'+
 					'#SBATCH --mem=32000\n'+
-					'cat ' + outdir + '*'+ pop + '_raw.table | tail -n+2 > ' + outdir1 + pop + '.table\n'+
-					'rm -r ' + outdir + '\n')
+					'cat ' + outdir + '*'+ pop + '_raw.table | tail -n+2 > ' + outdir1 + pop + '.table\n')
+	if args.K == false:
+		shfile3.write('rm -r ' + outdir + '\n')
 	shfile3.close()
 
 	if args.P2 == 'false':
@@ -159,8 +160,9 @@ for pop in POP_names:
 					'#SBATCH --mem=32000\n'+
 					'source python-3.5.1\n'+
 					'source env/bin/activate\n'+
-					'python3 /usr/users/JIC_c1/monnahap/GenomeScan/recode012.py -i ' + outdir1 + pop + '.table -mf ' + str(1.0 - args.M) + ' -dp ' + args.DP + ' -o ' + outdir1 +'\n'
-					'rm ' + outdir1 + pop + '.table')
+					'python3 /usr/users/JIC_c1/monnahap/GenomeScan/recode012.py -i ' + outdir1 + pop + '.table -mf ' + str(1.0 - args.M) + ' -dp ' + args.DP + ' -o ' + outdir1 +'\n')
+	if args.K == false:	
+		shfile3.write('rm ' + outdir1 + pop + '.table')
 	shfile3.close()
 
 	if args.P2 == 'false':
@@ -188,8 +190,9 @@ for pop in POP_names:
 					'#SBATCH --mem=32000\n'+
 					'source python-3.5.1\n'+
 					'source env/bin/activate\n'+
-					'python3 /usr/users/JIC_c1/monnahap/GenomeScan/wpm.py -i '+ outdir1 + pop + '.recode.txt -pop ' + pop + ' -o ' + outdir1 + ' -m ' + str(args.M) + ' -ws ' + args.WS + ' -ms ' + args.MS + '\n'+
-					'rm ' + outdir1 + pop + '.recode.txt')
+					'python3 /usr/users/JIC_c1/monnahap/GenomeScan/wpm.py -i '+ outdir1 + pop + '.recode.txt -pop ' + pop + ' -o ' + outdir1 + ' -m ' + str(args.M) + ' -ws ' + args.WS + ' -ms ' + args.MS + '\n')
+	if args.K == false:
+		shfile3.write('rm ' + outdir1 + pop + 'table.recode.txt')
 	shfile3.close()
 
 	if args.P2 == 'false':
