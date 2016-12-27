@@ -33,13 +33,13 @@ def calcwpm(input_file, output, popname="pop", missingness=0.1, window_size=5000
             if i % 100000 == 0:
                 print(i)
             if i == 0:
+                oldscaff = scaff
                 totind = len(line[5:])
                 ploidy = int(an) / totind
                 sampind = int(math.ceil(totind * (1.0 - missingness)))
                 if sampind == totind and missingness != 0.0:
                     sampind = totind - 1
                 AN = int(sampind * ploidy)
-                print(AN, sampind, totind, ploidy)
                 n = float(AN)
                 p = []
                 Ehet = []
@@ -60,7 +60,7 @@ def calcwpm(input_file, output, popname="pop", missingness=0.1, window_size=5000
                 e1 = c1 / aw
                 e2 = c2 / (aw**2 + a2)
 
-            if int(pos) > start and int(pos) <= end and int(an) >= AN:
+            if int(pos) > start and int(pos) <= end and int(an) >= AN and scaff == oldscaff:
                 snp_count += 1
                 sgt = numpy.random.choice(gt, size=sampind, replace=False)
                 sac = sum([int(x) for x in sgt])
@@ -70,7 +70,7 @@ def calcwpm(input_file, output, popname="pop", missingness=0.1, window_size=5000
                 afs[sac] += 1
                 AFS[sac] += 1
 
-            elif int(pos) > end:
+            elif int(pos) > end or scaff != oldscaff:
                 Pi = 0.0
                 h = 0.0
                 L = 0.0
@@ -102,18 +102,18 @@ def calcwpm(input_file, output, popname="pop", missingness=0.1, window_size=5000
 
                     out1.write(popname + '\t' + scaff + '\t' +
                                str(start) + '\t' +
-                    str(end) + '\t' +
-                    str(window_size) + '\t' +
-                    str(snp_count) + '\t' +
-                    str(numpy.mean(p1)) + '\t' +
-                    str(numpy.mean(Ehet)) + '\t' +
-                    str(W) + '\t' +
-                    str(Pi) + '\t' +
-                    str(h) + '\t' +
-                    str(L) + '\t' +
-                    str(D) + '\t' +
-                    str(H) + '\t' +
-                    str(E) + '\n')
+                               str(end) + '\t' +
+                               str(window_size) + '\t' +
+                               str(snp_count) + '\t' +
+                               str(numpy.mean(p1)) + '\t' +
+                               str(numpy.mean(Ehet)) + '\t' +
+                               str(W) + '\t' +
+                               str(Pi) + '\t' +
+                               str(h) + '\t' +
+                               str(L) + '\t' +
+                               str(D) + '\t' +
+                               str(H) + '\t' +
+                               str(E) + '\n')
 
                 else:
                     winexclcount += 1
@@ -122,6 +122,7 @@ def calcwpm(input_file, output, popname="pop", missingness=0.1, window_size=5000
                 p = []
                 Ehet = []
                 afs = [0 for cat in range(0, AN + 1)]
+                oldscaff = scaff
 
                 while float(pos) > end:
                     end += window_size / 2
@@ -152,19 +153,19 @@ def calcwpm(input_file, output, popname="pop", missingness=0.1, window_size=5000
     E = (L - W) / (varL_W**0.5)
 
     out1.write(popname + '\tGenome\t' +
-    str("-99") + '\t' +
-    str("-99") + '\t' +
-    str("-99") + '\t' +
-    str("-99") + '\t' +
-    str("-99") + '\t' +
-    str("-99") + '\t' +
-    str(W) + '\t' +
-    str(Pi) + '\t' +
-    str(h) + '\t' +
-    str(L) + '\t' +
-    str(D) + '\t' +
-    str(H) + '\t' +
-    str(E) + '\n')
+               str("-99") + '\t' +
+               str("-99") + '\t' +
+               str("-99") + '\t' +
+               str("-99") + '\t' +
+               str("-99") + '\t' +
+               str("-99") + '\t' +
+               str(W) + '\t' +
+               str(Pi) + '\t' +
+               str(h) + '\t' +
+               str(L) + '\t' +
+               str(D) + '\t' +
+               str(H) + '\t' +
+               str(E) + '\n')
 
     out1.close()
 
