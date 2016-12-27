@@ -123,11 +123,14 @@ def calcwpm(input_file, output, popname="pop", missingness=0.1, window_size=5000
                 Ehet = []
                 afs = [0 for cat in range(0, AN + 1)]
                 oldscaff = scaff
+                if int(pos) > end:
+                    while float(pos) > end:
+                        end += window_size / 2
 
-                while float(pos) > end:
-                    end += window_size / 2
-
-                start = end - window_size
+                    start = end - window_size
+                elif scaff != oldscaff:
+                    start = 0
+                    end = start + window_size
     print(AFS)
     S = float(sum(AFS[1:-1]))
     W = S / aw
