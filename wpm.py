@@ -59,7 +59,7 @@ def calcwpm(input_file, output, popname="pop", missingness=0.1, window_size=5000
                 c2 = b2 - (n + 2) / (aw * n) + a2 / aw**2
                 e1 = c1 / aw
                 e2 = c2 / (aw**2 + a2)
-            print(pos, end, scaff, oldscaff)
+            
             if int(pos) > start and int(pos) <= end and int(an) >= AN and scaff == oldscaff:
                 snp_count += 1
                 sgt = numpy.random.choice(gt, size=sampind, replace=False)
@@ -69,8 +69,10 @@ def calcwpm(input_file, output, popname="pop", missingness=0.1, window_size=5000
                 Ehet.append(p1 * (1 - p1))
                 afs[sac] += 1
                 AFS[sac] += 1
+                print(pos, end, scaff, oldscaff, 'here1')
 
             elif int(pos) > end or scaff != oldscaff:
+                print(pos, end, scaff, oldscaff, 'here2')
                 Pi = 0.0
                 h = 0.0
                 L = 0.0
@@ -123,12 +125,13 @@ def calcwpm(input_file, output, popname="pop", missingness=0.1, window_size=5000
                 p = []
                 Ehet = []
                 afs = [0 for cat in range(0, AN + 1)]
-                oldscaff = scaff
+
                 if int(pos) > end:
                     while float(pos) > end:
                         end += window_size / 2
                     start = end - window_size
                 elif scaff != oldscaff:
+                    oldscaff = scaff
                     print("here3")
                     start = 0.0
                     end = window_size
