@@ -31,7 +31,7 @@ with open(args.i,"rU") as table:
 			ac=line[2]
 			an = line[3]
 			dp = int(line[4])
-			GT=scaff+'\t'+pos+'\t'+ac+'\t'+an+'\t'+dp+'\t'
+			GT=scaff+'\t'+pos+'\t'+ac+'\t'+an+'\t'+str(dp)+'\t'
 			alt=False
 			numobs=0			
 			for j,gt in enumerate(line[5:]):
