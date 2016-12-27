@@ -193,8 +193,8 @@ for pop in POP_names:
                   'source python-3.5.1\n' +
                   'source env/bin/activate\n' +
                   'python3 /usr/users/JIC_c1/monnahap/GenomeScan/wpm.py -i ' + outdir1 + pop + '.table.recode.txt -pop ' + pop + ' -o ' + outdir1 + ' -m ' + str(args.M) + ' -ws ' + args.WS + ' -ms ' + args.MS + '\n')
-    if args.K == 'false':
-        shfile3.write('rm ' + outdir1 + pop + '.table.recode.txt')
+    # if args.K == 'false':
+    #     shfile3.write('rm ' + outdir1 + pop + '.table.recode.txt')
     shfile3.close()
 
     if args.P2 == 'false':
@@ -209,28 +209,28 @@ for pop in POP_names:
     os.remove(pop + '.sh')
 
 # CONCATENATE ALL WPM FILES BUT HAVE TO DEAL WITH HEADERS IN EACH.
-shfile3 = open(pop + '.sh', 'w')
+# shfile3 = open(pop + '.sh', 'w')
 
-shfile3.write('#!/bin/bash\n' +
-              '#SBATCH -J ' + pop + '.sh' + '\n' +
-              '#SBATCH -e ' + oande + pop + '.cat2.err' + '\n' +
-              '#SBATCH -o ' + oande + pop + '.cat2.out' + '\n' +
-              '#SBATCH -p nbi-long\n' +
-              '#SBATCH -n 1\n' +
-              '#SBATCH -t 0-12:00\n' +
-              '#SBATCH --mem=32000\n' +
-              'head -n 1' + outdir1 + pop + '_WPM.txt > WithinPopMetrics.txt && tail -n+2 ' + outdir1 + '*_WPM.txt > WithinPopMetrics.txt\n')
-if args.K == 'false':
-    shfile3.write('rm ' + outdir1 + '*_WPM.txt\n')
-shfile3.close()
+# shfile3.write('#!/bin/bash\n' +
+#               '#SBATCH -J ' + pop + '.sh' + '\n' +
+#               '#SBATCH -e ' + oande + pop + '.cat2.err' + '\n' +
+#               '#SBATCH -o ' + oande + pop + '.cat2.out' + '\n' +
+#               '#SBATCH -p nbi-long\n' +
+#               '#SBATCH -n 1\n' +
+#               '#SBATCH -t 0-12:00\n' +
+#               '#SBATCH --mem=32000\n' +
+#               'head -n 1' + outdir1 + pop + '_WPM.txt > WithinPopMetrics.txt && tail -n+2 ' + outdir1 + '*_WPM.txt > WithinPopMetrics.txt\n')
+# if args.K == 'false':
+#     shfile3.write('rm ' + outdir1 + '*_WPM.txt\n')
+# shfile3.close()
 
-if args.P2 == 'false':
-    cmd3 = ('sbatch -d singleton ' + pop + '.sh')
-    p3 = subprocess.Popen(cmd3, shell=True)
-    sts3 = os.waitpid(p3.pid, 0)[1]
-elif args.P2 == 'true':
-    file3 = open(pop + '.sh', 'r')
-    data3 = file3.read()
-    print(data3)
+# if args.P2 == 'false':
+#     cmd3 = ('sbatch -d singleton ' + pop + '.sh')
+#     p3 = subprocess.Popen(cmd3, shell=True)
+#     sts3 = os.waitpid(p3.pid, 0)[1]
+# elif args.P2 == 'true':
+#     file3 = open(pop + '.sh', 'r')
+#     data3 = file3.read()
+#     print(data3)
 
 os.remove(pop + '.sh')

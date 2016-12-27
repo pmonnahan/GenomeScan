@@ -132,7 +132,7 @@ def calcwpm(input_file, output, popname="pop", missingness=0.1, window_size=5000
                     start = end - window_size
                 elif scaff != oldscaff:
                     oldscaff = scaff
-                    print("here3")
+
                     start = 0.0
                     end = window_size
     print(AFS)
