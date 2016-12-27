@@ -80,8 +80,8 @@ for pop in POP_names:
 		shfile1 = open(pop+'.sh','w')
 		shfile1.write('#!/bin/bash\n'+
 					'#SBATCH -J ' +pop +'.sh'+'\n'+
-					'#SBATCH -e '+oande+pop+'.gatk.err'+'\n'+
-					'#SBATCH -o '+oande+pop+'.gatk.out'+'\n'+
+					'#SBATCH -e '+oande+pop+vcf+'.gatk.err'+'\n'+
+					'#SBATCH -o '+oande+pop+vcf+'.gatk.out'+'\n'+
 					'#SBATCH -p nbi-medium\n'+
 					'#SBATCH -n 1\n'+
 					'#SBATCH -t 0-4:00\n'+
