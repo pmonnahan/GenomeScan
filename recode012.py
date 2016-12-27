@@ -58,6 +58,7 @@ with open(args.i,"rU") as table:
 				print("here2")
 				numsites+=1
 				GTfile.write(GT)
+				
 
 	print("number of individuals = ", numind)
 	print("number of sites = ", numsites)
