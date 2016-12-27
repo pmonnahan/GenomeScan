@@ -1,66 +1,64 @@
-import os, sys, subprocess, argparse, re
+import argparse
 
 # create variables that can be entered in the command line
 parser = argparse.ArgumentParser()
 parser.add_argument('-i', type=str, metavar='input_table_file', required=True, help='path to input table file (from -VariantsToTable) of scaffolds containing just scaff, pos, ac, an, dp and GT fields in that order')
-parser.add_argument('-mf',type=float,metavar='min_fraction',required=True,default=0.75,help='minimum fraction of individuals with genotype calls in order for site to be included in output')
-parser.add_argument('-dp',type=int,metavar='min_depth',required=True,default=10,help='minimum depth per individual')
-parser.add_argument('-o',type=str,metavar='output_directory',required=True,help='')
+parser.add_argument('-mf', type=float, metavar='min_fraction', required=True, default=0.75, help='minimum fraction of individuals with genotype calls in order for site to be included in output')
+parser.add_argument('-dp', type=int, metavar='min_depth', required=True, default=10, help='minimum depth per individual')
+parser.add_argument('-o', type=str, metavar='output_directory', required=True, help='')
 
 args = parser.parse_args()
 
-filename=args.i.split('/')[-1]
+filename = args.i.split('/')[-1]
 
-if args.o.endswith("/")!=True:
-	args.o += "/"
-
-
-
-with open(args.i,"rU") as table:
-	prefix=args.i[:-6]
-	GTfile=open(args.o+filename+".recode.txt","w")
-	numsites=0
-	for i,line in enumerate(table):
-		line=line.strip("\n")
-		line=line.split("\t")
-		if line[0].split("_")[0]=='scaffold':
-			ref='0'
-			numind=len(line[5:])
-			scaff = line[0]
-			pos=line[1]
-			ac=line[2]
-			an = line[3]
-			dp = int(line[4])
-			GT=scaff+'\t'+pos+'\t'+ac+'\t'+an+'\t'+str(dp)+'\t'
-			alt=False
-			numobs=0			
-			for j,gt in enumerate(line[5:]):
-				gt=gt.split("/")
-				if gt[0]=='.':
-					GT+='-9\t'
-				else:
-					gtc=int(len(gt))
-					if ref=='0':
-						ref=gt[0]
-					for g in gt:
-						if g == ref:
-							gtc-=1
-						else:
-							alt=True
-					GT+=str(gtc)+"\t"
-					numobs+=1
-			if i%100000==0:
-				print(i)	
-			GT.strip("\t")
-			GT+="\n"
-			print(scaff,pos,gtc,ref,numobs,numind,float(numobs)/float(numind),args.mf,dp,args.dp*len(line[5:]),alt)
-			if alt==True and float(numobs)/float(numind)>=args.mf and dp >= args.dp*len(line[5:]):
-				print("here2")
-				numsites+=1
-				GTfile.write(GT)
-				
-
-	print("number of individuals = ", numind)
-	print("number of sites = ", numsites)
+if args.o.endswith("/") is False:
+    args.o += "/"
 
 
+
+with open(args.i, "rU") as table:
+    prefix = args.i[:-6]
+    GTfile = open(args.o + filename + ".recode.txt", "w")
+    numsites = 0
+    for i, line in enumerate(table):
+        line = line.strip("\n")
+        line = line.split("\t")
+        if line[0].split("_")[0] == 'scaffold':
+            ref = '0'
+            numind = len(line[5:])
+            scaff = line[0]
+            pos = line[1]
+            ac = line[2]
+            an = line[3]
+            dp = int(line[4])
+            GT = scaff + '\t' + pos + '\t' + ac + '\t' + an + '\t' + str(dp) + '\t'
+            alt = False
+            numobs = 0
+            for j, gt in enumerate(line[5:]):
+                gt = gt.split("/")
+                if gt[0] == '.':
+                    GT += '-9\t'
+                else:
+                    gtc = int(len(gt))
+                    if ref == '0':
+                        ref = gt[0]
+                    for g in gt:
+                        if g == ref:
+                            gtc -= 1
+                        else:
+                            alt = True
+                    GT += str(gtc) + "\t"
+                    numobs += 1
+            if i % 100000 == 0:
+                print(i)
+            GT.strip("\t")
+            GT += "\n"
+            print(scaff, pos, gtc, ref, numobs, numind, float(numobs) / float(numind), args.mf, dp, args.dp * len(line[5:]), alt)
+            if alt is True and float(numobs) / float(numind) >= args.mf and dp >= args.dp * len(line[5:]):
+                print("here2")
+                numsites += 1
+                GTfile.write(GT)
+                j = 5.0 + "asdf"
+
+    print("number of individuals = ", numind)
+    print("number of sites = ", numsites)
