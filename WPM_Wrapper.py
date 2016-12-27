@@ -192,9 +192,9 @@ for pop in POP_names:
                   '#SBATCH --mem=32000\n' +
                   'source python-3.5.1\n' +
                   'source env/bin/activate\n' +
-                  'python3 /usr/users/JIC_c1/monnahap/GenomeScan/wpm.py -i ' + outdir1 + pop + 'table.recode.txt -pop ' + pop + ' -o ' + outdir1 + ' -m ' + str(args.M) + ' -ws ' + args.WS + ' -ms ' + args.MS + '\n')
+                  'python3 /usr/users/JIC_c1/monnahap/GenomeScan/wpm.py -i ' + outdir1 + pop + '.table.recode.txt -pop ' + pop + ' -o ' + outdir1 + ' -m ' + str(args.M) + ' -ws ' + args.WS + ' -ms ' + args.MS + '\n')
     if args.K == 'false':
-        shfile3.write('rm ' + outdir1 + pop + 'table.recode.txt')
+        shfile3.write('rm ' + outdir1 + pop + '.table.recode.txt')
     shfile3.close()
 
     if args.P2 == 'false':
