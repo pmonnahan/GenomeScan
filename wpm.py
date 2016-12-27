@@ -122,13 +122,12 @@ def calcwpm(input_file, output, popname="pop", missingness=0.1, window_size=5000
                 p = []
                 Ehet = []
                 afs = [0 for cat in range(0, AN + 1)]
-                AFS = [0 for cat in range(0, AN + 1)]
 
                 while float(pos) > end:
                     end += window_size / 2
 
                 start = end - window_size
-
+    print(AFS)
     S = float(sum(AFS[1:-1]))
     W = S / aw
     W2 = S * (S - 1) / ((aw**2) + bw)
