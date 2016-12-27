@@ -23,7 +23,6 @@ with open(args.i,"rU") as table:
 	for i,line in enumerate(table):
 		line=line.strip("\n")
 		line=line.split("\t")
-		print(line[0].split("_")[0])
 		if line[0].split("_")[0]=='scaffold':
 			ref='0'
 			numind=len(line[5:])
@@ -49,12 +48,15 @@ with open(args.i,"rU") as table:
 						else:
 							alt=True
 					GT+=str(gtc)+"\t"
+					print("here1")
 					numobs+=1
 			if i%100000==0:
 				print(i)	
 			GT.strip("\t")
 			GT+="\n"
+			print(scaff,pos,gtc,ref,numobs,numind,float(numobs)/float(numind),args.mf,dp,args.dp*len(line[5:])
 			if alt==True and float(numobs)/float(numind)>args.mf and dp > args.dp*len(line[5:]):
+				print("here2")
 				numsites+=1
 				GTfile.write(GT)
 
