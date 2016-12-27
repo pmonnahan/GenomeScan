@@ -38,7 +38,8 @@ def calcwpm(input_file, output, popname="pop", missingness=0.1, window_size=5000
                 sampind = int(math.ceil(totind * (1.0 - missingness)))
                 if sampind == totind and missingness != 0.0:
                     sampind = totind - 1
-                AN = sampind * ploidy
+                AN = int(sampind * ploidy)
+                print(AN, sampind, totind, ploidy)
                 n = float(AN)
                 p = []
                 Ehet = []
