@@ -60,7 +60,7 @@ def calcwpm(input_file, output, popname="pop", missingness=0.1, window_size=5000
                 e1 = c1 / aw
                 e2 = c2 / (aw**2 + a2)
 
-            if int(pos) > start and int(pos) <= end and an >= AN:
+            if int(pos) > start and int(pos) <= end and int(an) >= AN:
                 snp_count += 1
                 sgt = numpy.random.choice(gt, size=sampind, replace=False)
                 sac = sum([int(x) for x in sgt])
