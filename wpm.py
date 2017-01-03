@@ -53,7 +53,7 @@ def calcwpm(input_file, output, popname="pop", missingness=0.1, window_size=5000
                     a2 += 1.0 / float(j**2)  # This is bn according to Zeng 2006
                     bw += 1.0 / float(j**2)
                 bw += 1.0 / float(n**2)  # This is the n+1 part
-                b1 = (n + 1) / (3 * (n - 1))  # From Tajima 1989
+                b1 = (n + 1) / (3 * (n - 1))  # b1 through e2 are taken directly rom Tajima 1989
                 b2 = (2 * n**2 + n + 3) / (9 * n * (n - 1))
                 c1 = b1 - (1 / aw)
                 c2 = b2 - (n + 2) / (aw * n) + a2 / aw**2
@@ -102,6 +102,7 @@ def calcwpm(input_file, output, popname="pop", missingness=0.1, window_size=5000
                     E = (L - W) / (varL_W**0.5)
 
                     out1.write(popname + '\t' + scaff + '\t' +
+                               str(ploidy) + '\t' +
                                str(start) + '\t' +
                                str(end) + '\t' +
                                str(window_size) + '\t' +
@@ -156,7 +157,7 @@ def calcwpm(input_file, output, popname="pop", missingness=0.1, window_size=5000
     H = (Pi - L) / (varPi_L**0.5)  # Normalized H according to Zeng 2006
     E = (L - W) / (varL_W**0.5)
 
-    out1.write(popname + '\tGenome\t' +
+    out1.write(popname + str(ploidy) + '\tGenome\t' +
                str("-99") + '\t' +
                str("-99") + '\t' +
                str("-99") + '\t' +
