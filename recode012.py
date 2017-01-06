@@ -6,6 +6,7 @@ parser.add_argument('-i', type=str, metavar='input_table_file', required=True, h
 parser.add_argument('-mf', type=float, metavar='min_fraction', required=True, default=0.75, help='minimum fraction of individuals with genotype calls in order for site to be included in output')
 parser.add_argument('-dp', type=int, metavar='min_depth', required=True, default=10, help='minimum depth per individual')
 parser.add_argument('-o', type=str, metavar='output_directory', required=True, help='')
+parser.add_argument('-pop', type=str, metavar='population_name', required=True, help='')
 
 args = parser.parse_args()
 
@@ -13,8 +14,6 @@ filename = args.i.split('/')[-1]
 
 if args.o.endswith("/") is False:
     args.o += "/"
-
-
 
 with open(args.i, "rU") as table:
     prefix = args.i[:-6]
@@ -31,7 +30,9 @@ with open(args.i, "rU") as table:
             ac = line[2]
             an = line[3]
             dp = int(line[4])
-            GT = scaff + '\t' + pos + '\t' + ac + '\t' + an + '\t' + str(dp) + '\t'
+            totind = len(line[5:])
+            ploidy = int(an) / totind
+            GT = args.pop + ploidy + scaff + '\t' + pos + '\t' + ac + '\t' + an + '\t' + str(dp) + '\t'
             alt = False
             numobs = 0
             for j, gt in enumerate(line[5:]):
@@ -53,9 +54,7 @@ with open(args.i, "rU") as table:
                 print(i)
             GT.strip("\t")
             GT += "\n"
-            print(scaff, pos, gtc, ref, numobs, numind, float(numobs) / float(numind), args.mf, dp, args.dp * len(line[5:]), alt)
             if alt is True and float(numobs) / float(numind) >= args.mf and dp >= args.dp * len(line[5:]):
-                print("here2")
                 numsites += 1
                 GTfile.write(GT)
 

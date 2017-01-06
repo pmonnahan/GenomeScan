@@ -6,6 +6,10 @@ import argparse
 import pandas
 import math
 
+# USE BELOW COMMANDS TO CONCAT POP FILES after all are finished running
+# head -1 BEL_WPM.txt > WPM_All.txt
+# tail -n+2 -q *_WPM.txt >> WPM_All.txt
+
 # create variables that can be entered in the command line
 parser = argparse.ArgumentParser()
 parser.add_argument('-PF', type=str, metavar='Individual_key', required=True, help='path to csv file containing information on what samples to include')
@@ -47,6 +51,7 @@ else:
     for file in os.listdir(args.O + "Within-Population-Metrics/"):
         if file.endswith('.table.recode.txt'):
             existing_files.append(file.split('.')[0])
+    print(existing_files)
     if set(POP_names).issuperset(set(existing_files)) is True:
         VCF_Parse = False
         print("Recoded vcf files already exist.  Using pre-existing files and skipping vcf parsing")
@@ -181,7 +186,7 @@ for pop in POP_names:
                       '#SBATCH --mem=32000\n' +
                       'source python-3.5.1\n' +
                       'source env/bin/activate\n' +
-                      'python3 /usr/users/JIC_c1/monnahap/GenomeScan/recode012.py -i ' + outdir1 + pop + '.table -mf ' + str(1.0 - args.M) + ' -dp ' + args.DP + ' -o ' + outdir1 + '\n')
+                      'python3 /usr/users/JIC_c1/monnahap/GenomeScan/recode012.py -i ' + outdir1 + pop + '.table -pop ' + pop + ' -mf ' + str(1.0 - args.M) + ' -dp ' + args.DP + ' -o ' + outdir1 + '\n')
         if args.K == 'false':
             shfile3.write('rm ' + outdir1 + pop + '.table')
         shfile3.close()
@@ -211,7 +216,7 @@ for pop in POP_names:
                   '#SBATCH --mem=32000\n' +
                   'source python-3.5.1\n' +
                   'source env/bin/activate\n' +
-                  'python3 /usr/users/JIC_c1/monnahap/GenomeScan/wpm.py -i ' + outdir1 + pop + '.table.recode.txt -pop ' + pop + ' -o ' + outdir1 + ' -sampind ' + str(sampind) + ' -ws ' + args.WS + ' -ms ' + args.MS + '\n')
+                  'python3 /usr/users/JIC_c1/monnahap/GenomeScan/wpm.py -i ' + outdir1 + pop + '.table.recode.txt -o ' + outdir1 + ' -sampind ' + str(sampind) + ' -ws ' + args.WS + ' -ms ' + args.MS + '\n')
     # if args.K == 'false':
     #     shfile3.write('rm ' + outdir1 + pop + '.table.recode.txt')
     shfile3.close()
@@ -227,29 +232,3 @@ for pop in POP_names:
 
     os.remove(pop + '.sh')
 
-# CONCATENATE ALL WPM FILES BUT HAVE TO DEAL WITH HEADERS IN EACH.
-# shfile3 = open(pop + '.sh', 'w')
-
-# shfile3.write('#!/bin/bash\n' +
-#               '#SBATCH -J ' + pop + '.sh' + '\n' +
-#               '#SBATCH -e ' + oande + pop + '.cat2.err' + '\n' +
-#               '#SBATCH -o ' + oande + pop + '.cat2.out' + '\n' +
-#               '#SBATCH -p nbi-long\n' +
-#               '#SBATCH -n 1\n' +
-#               '#SBATCH -t 0-12:00\n' +
-#               '#SBATCH --mem=32000\n' +
-#               'head -n 1' + outdir1 + pop + '_WPM.txt > WithinPopMetrics.txt && tail -n+2 ' + outdir1 + '*_WPM.txt > WithinPopMetrics.txt\n')
-# if args.K == 'false':
-#     shfile3.write('rm ' + outdir1 + '*_WPM.txt\n')
-# shfile3.close()
-
-# if args.P2 == 'false':
-#     cmd3 = ('sbatch -d singleton ' + pop + '.sh')
-#     p3 = subprocess.Popen(cmd3, shell=True)
-#     sts3 = os.waitpid(p3.pid, 0)[1]
-# elif args.P2 == 'true':
-#     file3 = open(pop + '.sh', 'r')
-#     data3 = file3.read()
-#     print(data3)
-
-os.remove(pop + '.sh')

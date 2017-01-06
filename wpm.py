@@ -7,16 +7,13 @@ import numpy
 # export PYTHONPATH="$PYTHONPATH:/Users/monnahap/Documents/Research/code/GenomeScan/"
 
 # Substitute missingness for number of individuals to downsample to.  That way you can enter one number for all populations to be downsampled to.
-def calcwpm(input_file, output, popname="pop", sampind=5, window_size=50000, minimum_snps=2):
+def calcwpm(input_file, output, sampind=5, window_size=50000, minimum_snps=2):
 
     snp_count = 0
     start = 0.0
     end = window_size
     winexclcount = 0
     num_wind = 0
-    outfile = output + popname + "_WPM.txt"
-    out1 = open(outfile, 'w')
-    out1.write("pop\tploidy\tsampind\tscaff\tstart\tend\twin_size\tnum_snps\tavg_freq\tavg_Ehet\tThetaW\tPi\tThetaH\tThetaL\tD\tH\tE\n")
 
     with open(input_file, 'r') as infile:
         for i, line in enumerate(infile):
@@ -25,16 +22,17 @@ def calcwpm(input_file, output, popname="pop", sampind=5, window_size=50000, min
             line = line.strip("\t")
             line = line.split("\t")
 
-            scaff, pos, ac, an, dp = line[:5]
+            pop, ploidy, scaff, pos, ac, an, dp = line[:7]
 
-            gt = line[5:]
+            gt = line[7:]
 
             if i % 100000 == 0:
                 print(i)
             if i == 0:
+                outfile = output + pop + "_WPM.txt"
+                out1 = open(outfile, 'w')
+                out1.write("pop\tploidy\tsampind\tscaff\tstart\tend\twin_size\tnum_snps\tavg_freq\tavg_Ehet\tThetaW\tPi\tThetaH\tThetaL\tD\tH\tE\n")
                 oldscaff = scaff
-                totind = len(line[5:])
-                ploidy = int(an) / totind
                 AN = int(sampind * ploidy)
                 n = float(AN)
                 p = []
@@ -96,7 +94,7 @@ def calcwpm(input_file, output, popname="pop", sampind=5, window_size=50000, min
                     D = (Pi - W) / (varPi_W**0.5)
                     H = (Pi - L) / (varPi_L**0.5)  # Normalized H according to Zeng 2006
                     E = (L - W) / (varL_W**0.5)
-                    out1.write(popname + '\t' +
+                    out1.write(pop + '\t' +
                                str(ploidy) + '\t' +
                                str(sampind) + '\t' +
                                scaff + '\t' +
@@ -171,7 +169,7 @@ def calcwpm(input_file, output, popname="pop", sampind=5, window_size=50000, min
             H = (Pi - L) / (varPi_L**0.5)  # Normalized H according to Zeng 2006
             E = (L - W) / (varL_W**0.5)
 
-            out1.write(popname + '\t' +
+            out1.write(pop + '\t' +
                        str(ploidy) + '\t' +
                        str(sampind) + '\t' +
                        scaff + '\t' +
@@ -214,7 +212,7 @@ def calcwpm(input_file, output, popname="pop", sampind=5, window_size=50000, min
     H = (Pi - L) / (varPi_L**0.5)  # Normalized H according to Zeng 2006
     E = (L - W) / (varL_W**0.5)
 
-    out1.write(popname + '\t' + str(ploidy) + '\t' + str(sampind) + '\tGenome\t' +
+    out1.write(pop + '\t' + str(ploidy) + '\t' + str(sampind) + '\tGenome\t' +
                str("-99") + '\t' +
                str("-99") + '\t' +
                str("-99") + '\t' +
@@ -239,11 +237,10 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', type=str, metavar='input_file', required=True, help='input file created with recode012.py')
     parser.add_argument('-o', type=str, metavar='output_directory', required=True, help='Output Directory')
-    parser.add_argument('-pop', type=str, metavar='population_name', required=True, help='Name of population')
     parser.add_argument('-sampind', type=int, metavar='DownSampled_individuals', required=False, default='5', help='Number of individuals to downsample the data to')
     parser.add_argument('-ws', type=float, metavar='window_size', required=False, default='10000.0', help='Size of windows in bp')
     parser.add_argument('-ms', type=int, metavar='minimum_snps', required=False, default='2', help='minimum number of snps in a window')
 
     args = parser.parse_args()
 
-    j1, j2, j3, j4, j5, j6, j7, j8, j9 = calcwpm(args.i, args.o, args.pop, args.sampind, args.ws, args.ms)
+    j1, j2, j3, j4, j5, j6, j7, j8, j9 = calcwpm(args.i, args.o, args.sampind, args.ws, args.ms)
