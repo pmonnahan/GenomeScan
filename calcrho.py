@@ -40,17 +40,54 @@ def calcrho(input_file, output, popname="pop", sampind=5, window_size=50000, min
                 AN = int(sampind * ploidy)
                 n = float(AN)
                 p = []
-
+                Wd = [] # S1 - r, where r is number of subpops
+                Ww = [] # r - 1
+                SSs = []
+                SSi = []
+                Wa = [] # (S1 - S2)/S1, where S1 is sum(ni) and S2 is sum(ni^2) and ni is number individuals
+                Num = 0.0
+                Den = 0.0
 
             if int(pos) > start and int(pos) <= end and scaff == oldscaff:
-                if pos == old_pos:
+                if pos == old_pos: # Accruing information from multiple populations but same locus
                     Locus.append(line)
-                else:
+                else: # Within current window but have moved on from previous locus
+                    X_i = []
+                    sss = 0.0
+                    ssi = 0.0
+                    num = 0.0
+                    den = 0.0
+                    s1 = 0.0
+                    s2 = 0.0
+                    wd = 0.0
+                    X_bar = 0.0
+                    Tot_alleles = 0.0
                     for pop_site in Locus:
-                        print("hey")
+                        ploidy = pop_site[1]
+                        num_ind = len(pop_site[7:]) # THIS MUST BE CHANGED IF DOWNSAMPLING IS IMPLEMENTED
+                        x_i = sum([int(geno) for geno in pop_site[7:]]) / (num_ind * ploidy)
+                        X_i.append(x_i)
+                        s1 += num_ind
+                        s2 += num_ind**2
+                        for ind in pop_site[7:]:
+                            ssi += (float(ind) / float(ploidy)) - x_i
+                            Tot_alleles += float(ploidy)
+                            X_bar += float(ind)
                         # Do rho calcs for site
+                    X_bar = X_bar / Tot_alleles
+                    wa = (s1 - s2) / s1
+                    wd = s1 - len(Locus)
+                    ww = len(Locus) - 1
+                    for x in X_i:
+                        sss += x - X_bar
+
+                    num += (wd * sss) - (ww * ssi)
+                    den += (wa * ssi)
 
                     # RESET SUMS OF SQUARES
+                    Locus = []
+                    Locus.append(line)
+                    old_pos = pos
                     snp_count += 1
                     sgt = numpy.random.choice(gt, size=sampind, replace=False)
                     sac = sum([int(x) for x in sgt])
