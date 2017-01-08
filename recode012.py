@@ -32,7 +32,7 @@ with open(args.i, "rU") as table:
             dp = int(line[4])
             totind = len(line[5:])
             ploidy = int(an) / totind
-            GT = args.pop + str(ploidy) + scaff + '\t' + pos + '\t' + ac + '\t' + an + '\t' + str(dp) + '\t'
+            GT = args.pop + '\t' + str(ploidy) + '\t' + scaff + '\t' + pos + '\t' + ac + '\t' + an + '\t' + str(dp) + '\t'
             alt = False
             numobs = 0
             for j, gt in enumerate(line[5:]):
