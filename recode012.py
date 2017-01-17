@@ -30,7 +30,10 @@ with open(args.i, "rU") as table:
             ac = line[2]
             an = line[3]
             dp = int(line[4])
-            totind = len(line[5:])
+            try:
+                totind = len(line[5:].remove('-9'))
+            except ValueError:
+                totind = len(line[5:])
             ploidy = int(an) / totind
             GT = args.pop + '\t' + str(ploidy) + '\t' + scaff + '\t' + pos + '\t' + ac + '\t' + an + '\t' + str(dp) + '\t'
             alt = False
