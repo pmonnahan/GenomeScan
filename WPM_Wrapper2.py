@@ -193,7 +193,7 @@ class PopGen:
                                   'python3 /usr/users/JIC_c1/monnahap/GenomeScan/recode012.py -i ' + self.split_dir + pop + '.table -pop ' + pop + ' -mf ' + str(1.0 - missingness) + ' -dp ' + str(min_avg_dp) + ' -o ' + recode_dir + '\n')
                     shfile3.close()
 
-                    if print1 is True:
+                    if print1 is False:
                         cmd3 = ('sbatch -d singleton ' + pop + '.sh')
                         p3 = subprocess.Popen(cmd3, shell=True)
                         sts3 = os.waitpid(p3.pid, 0)[1]
@@ -207,8 +207,12 @@ class PopGen:
             print("Must run splitVCFs prior to running recode")
 
     # CALCULATE WITHIN POPULATION METRICS
-    def calcwpm(self, recode_dir, window_size, min_snps, print1=False, mem=16000, numcores=1):
+    def calcwpm(self, recode_dir, window_size, min_snps, population="all", print1=False, mem=16000, numcores=1):
 
+        if population == "all":
+            pops = self.pops
+        else:
+            pops = [population]
         if recode_dir.endswith("/") is False:
             recode_dir += "/"
 
@@ -219,7 +223,7 @@ class PopGen:
                           "Minimum number of SNPs per window  = " + str(min_snps) + "\n")
             summary.close()
 
-            for pop in self.pops:
+            for pop in pops:
                 shfile3 = open(pop + '.sh', 'w')
 
                 shfile3.write('#!/bin/bash\n' +
