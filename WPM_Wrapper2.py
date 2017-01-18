@@ -15,24 +15,12 @@ import math
 # tail -n+2 -q *_WPM.txt >> WPM_All.txt
 
 # create variables that can be entered in the command line
-parser = argparse.ArgumentParser()
-parser.add_argument('-PF', type=str, metavar='Individual_key', required=True, help='path to csv file containing information on what samples to include')
-parser.add_argument('-V', type=str, metavar='vcf_directory', required=False, default="-99", help='directory to vcf files to be split and converted to table')
-parser.add_argument('-WS', type=str, metavar='Window_Size_BP', required=False, default='10000', help='size of windows in terms of bp; for geo window_type')
-parser.add_argument('-MS', type=str, metavar='Minimum_SNPs', required=False, default='10', help='Minimum number of SNPs in a window')
-parser.add_argument('-DP', type=str, metavar='Minimum_Depth', required=False, default='10', help='minimum average depth per individual')
-parser.add_argument('-M', type=float, metavar='Missingness', required=False, default='0.0', help='Proportion of missing individuals allowed in each group')
-parser.add_argument('-P1', type=str, metavar='Print_VCF_Commands', required=False, default='false', help='if true then print shell script to screen')
-parser.add_argument('-P2', type=str, metavar='Print_GS_Commands', required=False, default='false', help='if true then print shell script to screen')
-parser.add_argument('-K', type=str, metavar='Keep_files', required=False, default='false', help='Do you want to keep the all output files?')
-parser.add_argument('-O', type=str, metavar='output_directory', required=True, help='Output Directory')
-
-args = parser.parse_args()
 
 class PopGen:
 
     def __init__(self,WorkingDir):
-        WorkingDir = WorkingDir.strip("/") + "/"
+        if WorkingDir.endswith("/") is False:
+            WorkingDir += "/"
         if os.path.exists(WorkingDir) is False:
             os.mkdir(WorkingDir)
             os.mkdir(WorkingDir + "OandE/")
@@ -52,9 +40,6 @@ class PopGen:
 
         # Determine number of individuals to downsample all populations to
         min_ind = min([sum(list(POP_file[pop])) for pop in POP_names])
-        sampind = int(math.ceil(min_ind * (1.0 - args.M)))
-        if sampind == min_ind and args.M != 0.0:
-            sampind = min_ind - 1
         self.pops = POP_names
         self.samps = samps
         self.min_ind = min_ind
@@ -64,8 +49,8 @@ class PopGen:
 
 
     def splitVCFs(self, vcf_dir, ref_path, mem='16000', print1=False, overwrite=False):
-
-        vcf_dir = vcf_dir.strip("/") + "/"
+        if vcf_dir.endswith("/") is False:
+            vcf_dir += "/"
         outdir = self.dir + "VCFs/"
         self.split_dir = outdir
 
@@ -83,14 +68,6 @@ class PopGen:
             ss1 = ""
             for samp in self.samps[pop]:
                 sample_string1 += " -sn " + samp
-
-            summary = open(outdir1 + "InputSummary.txt", 'w')
-            summary.write('VCF Directory = ' + args.V + '\n' +
-                          'Window size in bp = ' + args.WS + '\n' +
-                          "Minimum number of SNPs per window  = " + args.MS + "\n" +
-                          "Minimum average depth per individual  = " + args.DP + "\n" +
-                          'Proportion missing data allowed = ' + str(args.M) + '\n')
-            summary.close()
 
             joblist = []
 
@@ -163,6 +140,11 @@ class PopGen:
 
 
     def recode(self, min_avg_dp, missingness, print1=False):
+
+        sampind = int(math.ceil(min_ind * (1.0 - missingness)))
+        if sampind == self.min_ind and missingness != 0.0:
+            sampind = self.min_ind - 1
+        self.samp_ind = sampind
         # Determine if the recoded vcf files already exist and if so, set VCF_Parse to False
         recode_dir = self.dir + "Recoded.DP" + str(min_avg_dp) + ".M" + str(missingness) + "/"
         if os.path.exists(recode_dir) is False:
@@ -192,7 +174,7 @@ class PopGen:
                                   '#SBATCH --mem=32000\n' +
                                   'source python-3.5.1\n' +
                                   'source env/bin/activate\n' +
-                                  'python3 /usr/users/JIC_c1/monnahap/GenomeScan/recode012.py -i ' + self.split_dir + pop + '.table -pop ' + pop + ' -mf ' + str(1.0 - missingness) + ' -dp ' + min_avg_dp + ' -o ' + recode_dir + '\n')
+                                  'python3 /usr/users/JIC_c1/monnahap/GenomeScan/recode012.py -i ' + self.split_dir + pop + '.table -pop ' + pop + ' -mf ' + str(1.0 - missingness) + ' -dp ' + str(min_avg_dp) + ' -o ' + recode_dir + '\n')
                     shfile3.close()
 
                     if print1 is True:
@@ -207,22 +189,57 @@ class PopGen:
                     os.remove(pop + '.sh')
 
     # CALCULATE WITHIN POPULATION METRICS
-    def calcwpm(self, recode_dir, window_size, min_snps, print1=False):
+    def calcwpm(self, recode_dir, window_size, min_snps, print1=False, mem=16000):
+        summary = open(outdir1 + "WPMInputSummary.txt", 'w')
+        summary.write('VCF Directory = ' + self.vcf_dir + '\n' +
+                      'Window size in bp = ' + window_size + '\n' +
+                      "Minimum number of SNPs per window  = " + min_snps + "\n")
+        summary.close()
+        if recode_dir.endswith("/") is False:
+            recode_dir += "/"
 
-        recode_dir = recode_dir.strip("/") + "/"
-        shfile3 = open(pop + '.sh', 'w')
+        for pop in self.pops:
+            shfile3 = open(pop + '.sh', 'w')
+
+            shfile3.write('#!/bin/bash\n' +
+                          '#SBATCH -J ' + pop + '.sh' + '\n' +
+                          '#SBATCH -e ' + self.oande + pop + '.wpm.err' + '\n' +
+                          '#SBATCH -o ' + self.oande + pop + '.wpm.out' + '\n' +
+                          '#SBATCH -p nbi-long\n' +
+                          '#SBATCH -n 1\n' +
+                          '#SBATCH -t 1-00:00\n' +
+                          '#SBATCH --mem=' +str(mem) + '\n' +
+                          'source python-3.5.1\n' +
+                          'source env/bin/activate\n' +
+                          'python3 /usr/users/JIC_c1/monnahap/GenomeScan/wpm.py -i ' + recode_dir + pop + '.table.recode.txt -o ' + recode_dir + ' -sampind ' + str(self.samp_ind) + ' -ws ' + str(window_size) + ' -ms ' + str(min_snps) + '\n')
+            shfile3.close()
+
+            if print1 is False:
+                cmd3 = ('sbatch -d singleton ' + pop + '.sh')
+                p3 = subprocess.Popen(cmd3, shell=True)
+                sts3 = os.waitpid(p3.pid, 0)[1]
+            else:
+                file3 = open(pop + '.sh', 'r')
+                data3 = file3.read()
+                print(data3)
+
+            os.remove(pop + '.sh')
+
+    def calcpairwisebpm(self, recode_dir, pop1, pop2, window_size, minimum_snps, print1=False, mem=16000):
+
+        shfile3 = open(pop1 + 'v' + pop2 + '.sh', 'w')
 
         shfile3.write('#!/bin/bash\n' +
-                      '#SBATCH -J ' + pop + '.sh' + '\n' +
-                      '#SBATCH -e ' + self.oande + pop + '.wpm.err' + '\n' +
-                      '#SBATCH -o ' + self.oande + pop + '.wpm.out' + '\n' +
+                      '#SBATCH -J ' + pop1 + 'v' + pop2 + '.bpm.sh' + '\n' +
+                      '#SBATCH -e ' + self.oande + pop1 + 'v' + pop2 + '.bpm.err' + '\n' +
+                      '#SBATCH -o ' + self.oande + pop1 + 'v' + pop2 + '.bpm.out' + '\n' +
                       '#SBATCH -p nbi-long\n' +
                       '#SBATCH -n 1\n' +
                       '#SBATCH -t 1-00:00\n' +
-                      '#SBATCH --mem=32000\n' +
+                      '#SBATCH --mem=' +str(mem) + '\n' +
                       'source python-3.5.1\n' +
                       'source env/bin/activate\n' +
-                      'python3 /usr/users/JIC_c1/monnahap/GenomeScan/wpm.py -i ' + recode_dir + pop + '.table.recode.txt -o ' + recode_dir + ' -sampind ' + str(self.samp_ind) + ' -ws ' + str(window_size) + ' -ms ' + str(min_snps) + '\n')
+                      'python3 /usr/users/JIC_c1/monnahap/GenomeScan/bpm.py -i1 ' + recode_dir + pop1 + '.table.recode.txt -i1 ' + recode_dir + pop2 + '.table.recode.txt -o ' + recode_dir + ' -ws ' + str(window_size) + ' -ms ' + str(min_snps) + '\n')
         shfile3.close()
 
         if print1 is False:

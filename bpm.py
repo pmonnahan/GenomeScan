@@ -10,9 +10,9 @@ import numpy
 
 
 # Substitute missingness for number of individuals to downsample to.  That way you can enter one number for all populations to be downsampled to.
-def calcbpm(input_file1, input_file2, output, popnum, window_size, minimum_snps, minimum_individuals):
+def calcPairwiseBPM(input_file1, input_file2, output, window_size, minimum_snps):
 
-    def calcRholocus(locus_list):
+    def calcRho(locus_list):
         locus = []
         for l in locus_list:
             try:
@@ -52,7 +52,7 @@ def calcbpm(input_file1, input_file2, output, popnum, window_size, minimum_snps,
         num = (wd * sss) - (ww * ssi)
         den = (wa * ssi)
 
-        return num, den, jj
+        return [num, den]
 
 
     def calcFst(locus_list):
@@ -101,8 +101,9 @@ def calcbpm(input_file1, input_file2, output, popnum, window_size, minimum_snps,
         a = (n_bar * n_C) * (var_p - ((1.0/(n_bar -1.0)) * ((p_bar * (1.0 - p_bar)) - (((r - 1.0) / r) * var_p) - (0.25 * h_bar))))
         b = (n_bar / (n_bar - 1.0)) * ((p_bar * (1.0 - p_bar)) - (((r - 1.0) / r) * var_p) - (((2.0 * (n_bar - 1.0)) / (4.0 * n_bar)) * h_bar))
         c = 0.5 * h_bar
+        d = (a + b + c)
 
-        return a, b, c
+        return [a, d]
 
 
     def calcDxy(locus_info):
@@ -147,7 +148,6 @@ def calcbpm(input_file1, input_file2, output, popnum, window_size, minimum_snps,
     outfile = output + infile.replace('.txt','_RHO.txt')
     out1 = open(outfile, 'w')
     out1.write("pop1\tpop2\tscaff\tstart\tend\twin_size\tnum_snps\tRho\tFst\tdxy\n")
-    Dxy = 0.0
 
     # To downsample or not to downsample?? 
     # Cat files prior running script and sort by scaffold and position
@@ -169,20 +169,12 @@ def calcbpm(input_file1, input_file2, output, popnum, window_size, minimum_snps,
             old_pos = pos
             Locus = [] # Hold information of single locus across populations
             oldscaff = scaff
-            Wd = [] # S1 - r, where r is number of subpops
-            Ww = [] # r - 1
-            SSs = []
-            SSi = []
-            Wa = [] # (S1 - S2)/S1, where S1 is sum(ni) and S2 is sum(ni^2) and ni is number individuals
-            FNum = 0.0  # Numerator for entire genome
-            FDen = 0.0  # Denominator for entire genome
-            Fnum = 0.0  # Numerator for the window
-            Fden = 0.0  # Denominator for the window
-            RNum = 0.0  # Numerator for entire genome
-            RDen = 0.0  # Denominator for entire genome
-            Rnum = 0.0  # Numerator for the window
-            Rden = 0.0  # Denominator for the window
+            Fst = [0.0, 0.0]  # Fst[0] is numerator for genome, [1] is denominator for genome
+            Rho = [0.0, 0.0]  # Rho[0] is numerator for genome, [1] is denominator for genome
+            fst = [0.0, 0.0]  # Fst[0] is numerator for window, [1] is denominator for window
+            rho = [0.0, 0.0]  # Rho[0] is numerator for window, [1] is denominator for window
             dxy = 0.0  # Dxy for window
+            Dxy = 0.0
 
         if pos > start and pos <= end and scaff == oldscaff:
             if pos == old_pos: # Accruing information from multiple populations but same locus
@@ -191,20 +183,15 @@ def calcbpm(input_file1, input_file2, output, popnum, window_size, minimum_snps,
                     pop2 = pop
                     assert pop1 != pop2
             elif len(Locus) == popnum: # Within current window but have moved on from previous locus
-                n, d, j = calclocus(Locus)
-                a, b, c = calcFst(Locus)
+                new_rho = calcRho(Locus)
+                new_fst = calcFst(Locus)
                 dxy += calcDxy(Locus)
                 Dxy += dxy
                 snp_count += j
-                Fnum += a
-                Fden += (a + b + c)
-                FNum += a
-                FDen += (a + b + c)
-                Rnum += n
-                Rden += d
-                RNum += n
-                RDen += d
-
+                fst = [sum(x) for x in zip(fst, new_fst)]
+                rho = [sum(x) for x in zip(rho, new_rho)]
+                Fst = [sum(x) for x in zip(Fst, new_fst)]
+                Rho = [sum(x) for x in zip(Rho, new_rho)]
                 # RESET SUMS OF SQUARES
                 Locus = []
                 Locus.append(line)
@@ -219,29 +206,21 @@ def calcbpm(input_file1, input_file2, output, popnum, window_size, minimum_snps,
         elif int(pos) > end or scaff != oldscaff:
             if len(Locus) == popnum: # Current snp is onto next window, but must do calculation for previous locus before moving on
                 snp_count += 1
-                n, d, j = calclocus(Locus)
+                n, d, j = calcRho(Locus)
                 a, b, c = calcFst(Locus)
                 dxy += calcDxy(Locus)
                 Dxy += dxy
-                Fnum += a
-                Fden += (a + b + c)
-                FNum += a
-                FDen += (a + b + c)
-                Rnum += n
-                Rden += d
-                RNum += n
-                RDen += d
+                fst = [sum(x) for x in zip(fst, new_fst)]
+                rho = [sum(x) for x in zip(rho, new_rho)]
+                Fst = [sum(x) for x in zip(Fst, new_fst)]
+                Rho = [sum(x) for x in zip(Rho, new_rho)]
 
             if snp_count >= minimum_snps:  # Use or exclude window from
                 Snp_count += snp_count 
                 num_wind += 1
-
-                fst = Fnum / Fden
-
-                fac = num / den
-
-                rho = fac / (1 + fac)
-
+                fst = fst[0] / fst[1]
+                fac = rho[0] / rho[1]
+                rho_i = fac / (1 + fac)
                 dxy = dxy / float(snp_count)
 
                 out1.write(pop1 + '\t' + pop2 + '\t' + scaff + '\t' +
@@ -249,7 +228,7 @@ def calcbpm(input_file1, input_file2, output, popnum, window_size, minimum_snps,
                            str(end) + '\t' +
                            str(window_size) + '\t' +
                            str(snp_count) + '\t' +
-                           str(rho) + '\t' +
+                           str(rho_i) + '\t' +
                            str(fst) + '\t' +
                            str(dxy) + '\n')
 
@@ -258,10 +237,8 @@ def calcbpm(input_file1, input_file2, output, popnum, window_size, minimum_snps,
 
             snp_count = 0
             p = []
-            Fnum = 0.0
-            Fden = 0.0
-            Rnum = 0.0
-            Rden = 0.0
+            fst = [0.0, 0.0]  # Fst[0] is numerator for window, [1] is denominator for window
+            rho = [0.0, 0.0]  # Rho[0] is numerator for window, [1] is denominator for window
             dxy = 0.0
 
             if float(pos) > end:
@@ -285,22 +262,17 @@ def calcbpm(input_file1, input_file2, output, popnum, window_size, minimum_snps,
         a, b, c = calcFst(Locus)
         dxy += calcDxy(Locus)
         Dxy += dxy
-        Fnum += a
-        Fden += (a + b + c)
-        FNum += a
-        FDen += (a + b + c)
-        Rnum += n
-        Rden += d
-        RNum += n
-        RDen += d
+        fst = [sum(x) for x in zip(fst, new_fst)]
+        rho = [sum(x) for x in zip(rho, new_rho)]
+        Fst = [sum(x) for x in zip(Fst, new_fst)]
+        Rho = [sum(x) for x in zip(Rho, new_rho)]
 
     if snp_count >= minimum_snps:  # Use or exclude window from 
         num_wind += 1
-
-        fac = num / den
-
-        rho = fac / (1 + fac)
-
+        fst = fst[0] / fst[1]
+        fac = rho[0] / rho[1]
+        rho_i = fac / (1 + fac)
+        dxy = dxy / float(snp_count)
         dxy = dxy / snp_count
 
         out1.write(pop1 + '\t' + pop2 + '\t' + scaff + '\t' +
@@ -315,17 +287,18 @@ def calcbpm(input_file1, input_file2, output, popnum, window_size, minimum_snps,
     else:
         winexclcount += 1
 
-    FAC = Num / Den
-    rho = FAC / (1 + FAC)
-    Fst = FNum / FDen
+    FAC = Rho[0] / Rho[1]
+    rho_G = FAC / (1 + FAC)
+    Fst_G = Fst[0] / Fst[1]
+    Dxy = Dxy / Snp_count
     out1.write(pop1 + '\t' + pop2 + '\t' + "Genome" + '\t' +
          "-99" + '\t' +
          "-99" + '\t' +
          str(window_size) + '\t' +
          str(Snp_count) + '\t' +
-         str(rho) + '\t' +
-         str(Fst) + '\t' +
-         str(dxy) + '\n')
+         str(rho_G) + '\t' +
+         str(Fst_G) + '\t' +
+         str(Dxy) + '\n')
 
     out1.close()
 
@@ -335,13 +308,12 @@ def calcbpm(input_file1, input_file2, output, popnum, window_size, minimum_snps,
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('-i', type=str, metavar='input_file', required=True, help='input file created with recode012.py')
+    parser.add_argument('-i1', type=str, metavar='input_file1', required=True, help='input file created with recode012.py')
+    parser.add_argument('-i2', type=str, metavar='input_file2', required=True, help='input file created with recode012.py')
     parser.add_argument('-o', type=str, metavar='output_directory', required=True, help='Output Directory')
-    parser.add_argument('-popnum', type=int, metavar='number_of_populations', required=True, help='')
-    parser.add_argument('-sampind', type=int, metavar='DownSampled_individuals', required=False, default='5', help='Number of individuals to downsample the data to')
     parser.add_argument('-ws', type=float, metavar='window_size', required=False, default='10000.0', help='Size of windows in bp')
     parser.add_argument('-ms', type=int, metavar='minimum_snps', required=False, default='2', help='minimum number of snps in a window')
 
     args = parser.parse_args()
 
-    j1, j2, j3 = calcrho(args.i, args.o, args.popnum, args.ws, args.ms, args.sampind)
+    j1, j2, j3 = calc(args.i1, args.i2, args.o, args.popnum, args.ws, args.ms)

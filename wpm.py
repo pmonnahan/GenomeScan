@@ -10,6 +10,7 @@ import numpy
 def calcwpm(input_file, output, sampind=5, window_size=50000, minimum_snps=2):
 
     snp_count = 0
+    Snp_count = 0
     start = 0.0
     end = window_size
     winexclcount = 0
@@ -59,6 +60,7 @@ def calcwpm(input_file, output, sampind=5, window_size=50000, minimum_snps=2):
 
             if int(pos) > start and int(pos) <= end and int(an) >= AN and scaff == oldscaff:
                 snp_count += 1
+                Snp_count += 1
                 if len(gt) >= sampind:
                     sgt = numpy.random.choice(gt, size=sampind, replace=False)
                     sac = sum([int(x) for x in sgt])
@@ -101,7 +103,7 @@ def calcwpm(input_file, output, sampind=5, window_size=50000, minimum_snps=2):
                     H = (Pi - L) / (varPi_L**0.5)  # Normalized H according to Zeng 2006
                     E = (L - W) / (varL_W**0.5)
 
-                    out1.write(pop + '\t' +
+                    out1.write(pop + '\t' + 
                                str(ploidy) + '\t' +
                                str(sampind) + '\t' +
                                scaff + '\t' +
@@ -139,6 +141,7 @@ def calcwpm(input_file, output, sampind=5, window_size=50000, minimum_snps=2):
 
                 if int(pos) > start and int(pos) <= end and int(an) >= AN and scaff == oldscaff:
                     snp_count += 1
+                    Snp_count += 1
                     if len(gt) >= sampind:
                         sgt = numpy.random.choice(gt, size=sampind, replace=False)
                         sac = sum([int(x) for x in sgt])
@@ -226,7 +229,7 @@ def calcwpm(input_file, output, sampind=5, window_size=50000, minimum_snps=2):
                str("-99") + '\t' +
                str("-99") + '\t' +
                str("-99") + '\t' +
-               str("-99") + '\t' +
+               str(Snp_count) + '\t' +
                str("-99") + '\t' +
                str("-99") + '\t' +
                str(W) + '\t' +
