@@ -30,6 +30,7 @@ class PopGen:
         POP_names = list(POP_file.columns.values)[1:]
         sample_names = list(POP_file['Samples'])
         samps = {}
+        samp_nums = {}
         for pop in POP_names:
             pop_list = []
             include_index = list(POP_file[pop])
@@ -37,14 +38,30 @@ class PopGen:
                 if include_index[i] == 1:
                     pop_list.append(sample)
             samps[pop] = pop_list
+            samp_nums[pop] = len(pop_list)
+
 
         # Determine number of individuals to downsample all populations to
         min_ind = min([sum(list(POP_file[pop])) for pop in POP_names])
         self.pops = POP_names
         self.samps = samps
+        self.samp_nums = samp_nums
         self.min_ind = min_ind
         self.dir = WorkingDir
         self.oande = WorkingDir + "OandE/"
+
+
+    def removePop(self, popname):
+        popname = str(popname)
+        if popname in self.pops:
+            self.pops.pop(popname)
+            self.samps.pop(popname,None)
+            self.samp_nums.pop(popname, None)
+            # Recalculate min_ind
+            min_ind = min([self.samp_nums[pop] for pop in self.pops])
+            self.min_ind = min_ind
+        else:
+            print("Population does not exist")
 
 
     def splitVCFs(self, vcf_dir, ref_path, mem='16000', print1=False, overwrite=False):
