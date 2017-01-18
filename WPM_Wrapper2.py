@@ -65,7 +65,7 @@ class PopGen:
             print("Population does not exist")
 
 
-    def splitVCFs(self, vcf_dir, ref_path, mem=16000, print1=False, overwrite=False):
+    def splitVCFs(self, vcf_dir, ref_path, mem=16000, numcores=1,print1=False, overwrite=False):
         if vcf_dir.endswith("/") is False:
             vcf_dir += "/"
         outdir = self.dir + "VCFs/"
@@ -105,7 +105,7 @@ class PopGen:
                               '#SBATCH -e ' + self.oande + pop + vcf + '.gatk.err' + '\n' +
                               '#SBATCH -o ' + self.oande + pop + vcf + '.gatk.out' + '\n' +
                               '#SBATCH -p nbi-medium\n' +
-                              '#SBATCH -n 1\n' +
+                              '#SBATCH -n ' + str(numcores) + '\n' +
                               '#SBATCH -t 0-4:00\n' +
                               '#SBATCH --mem=' + str(mem) + '\n' +
                               'source GATK-3.6.0\n' +
@@ -135,8 +135,8 @@ class PopGen:
                           '#SBATCH -J ' + pop + '.sh' + '\n' +
                           '#SBATCH -e ' + self.oande + pop + '.cat.err' + '\n' +
                           '#SBATCH -o ' + self.oande + pop + '.cat.out' + '\n' +
-                          '#SBATCH -p nbi-long\n' +
-                          '#SBATCH -n 1\n' +
+                          '#SBATCH -p nbi-medium\n' +
+                          '#SBATCH -n ' + str(numcores) + '\n' +
                           '#SBATCH -t 0-12:00\n' +
                           '#SBATCH --mem=' + str(mem) + '\n' +
                           'cat ' + outdir + '*' + pop + '_raw.table | tail -n+2 > ' + outdir + pop + '.table\n')
@@ -154,7 +154,7 @@ class PopGen:
             os.remove(pop + '.sh')
 
 
-    def recode(self, min_avg_dp, missingness, print1=False, mem=16000):
+    def recode(self, min_avg_dp, missingness, print1=False, mem=16000, numcores=1):
 
         sampind = int(math.ceil(self.min_ind * (1.0 - missingness)))
         if sampind == self.min_ind and missingness != 0.0:
@@ -162,14 +162,14 @@ class PopGen:
         self.samp_ind = sampind
         # Determine if the recoded vcf files already exist and if so, set VCF_Parse to False
         recode_dir = self.dir + "Recoded.DP" + str(min_avg_dp) + ".M" + str(missingness) + "/"
+        existing_files = []
         if os.path.exists(recode_dir) is False:
             os.mkdir(recode_dir)
         else:
-            existing_files = []
             for file in os.listdir(recode_dir):
                 if file.endswith('.table.recode.txt'):
                     existing_files.append(file.split('.')[0])
-        if set(self.pops).issuperset(set(existing_files)) is True:
+        if set(self.pops).issuperset(set(existing_files)) is True and len(existing_files) != 0:
             print("Recoded vcf files already exist.  Delete folder or change parameters")
         # Look for '.recode' table files corresponding to POP_names...if they exist...skip all but wpm step and print message to output.
 
@@ -182,8 +182,8 @@ class PopGen:
                               '#SBATCH -J ' + pop + '.sh' + '\n' +
                               '#SBATCH -e ' + self.oande + pop + '.recode012.err' + '\n' +
                               '#SBATCH -o ' + self.oande + pop + '.recode012.out' + '\n' +
-                              '#SBATCH -p nbi-long\n' +
-                              '#SBATCH -n 1\n' +
+                              '#SBATCH -p nbi-medium\n' +
+                              '#SBATCH -n ' + str(numcores) + '\n' +
                               '#SBATCH -t 1-00:00\n' +
                               '#SBATCH --mem=' + str(mem) + '\n' +
                               'source python-3.5.1\n' +
@@ -203,7 +203,7 @@ class PopGen:
                 os.remove(pop + '.sh')
 
     # CALCULATE WITHIN POPULATION METRICS
-    def calcwpm(self, recode_dir, window_size, min_snps, print1=False, mem=16000):
+    def calcwpm(self, recode_dir, window_size, min_snps, print1=False, mem=16000, numcores=1):
 
         if recode_dir.endswith("/") is False:
             recode_dir += "/"
@@ -221,8 +221,8 @@ class PopGen:
                           '#SBATCH -J ' + pop + '.sh' + '\n' +
                           '#SBATCH -e ' + self.oande + pop + '.wpm.err' + '\n' +
                           '#SBATCH -o ' + self.oande + pop + '.wpm.out' + '\n' +
-                          '#SBATCH -p nbi-long\n' +
-                          '#SBATCH -n 1\n' +
+                          '#SBATCH -p nbi-medium\n' +
+                          '#SBATCH -n ' + str(numcores) + '\n' +
                           '#SBATCH -t 1-00:00\n' +
                           '#SBATCH --mem=' +str(mem) + '\n' +
                           'source python-3.5.1\n' +
@@ -241,7 +241,7 @@ class PopGen:
 
             os.remove(pop + '.sh')
 
-    def calcpairwisebpm(self, recode_dir, pop1, pop2, window_size, minimum_snps, print1=False, mem=16000):
+    def calcpairwisebpm(self, recode_dir, pop1, pop2, window_size, minimum_snps, print1=False, mem=16000, numcores=1):
 
         shfile3 = open(pop1 + 'v' + pop2 + '.sh', 'w')
 
@@ -249,8 +249,8 @@ class PopGen:
                       '#SBATCH -J ' + pop1 + 'v' + pop2 + '.bpm.sh' + '\n' +
                       '#SBATCH -e ' + self.oande + pop1 + 'v' + pop2 + '.bpm.err' + '\n' +
                       '#SBATCH -o ' + self.oande + pop1 + 'v' + pop2 + '.bpm.out' + '\n' +
-                      '#SBATCH -p nbi-long\n' +
-                      '#SBATCH -n 1\n' +
+                      '#SBATCH -p nbi-medium\n' +
+                      '#SBATCH -n ' + str(numcores) + '\n' +
                       '#SBATCH -t 1-00:00\n' +
                       '#SBATCH --mem=' + str(mem) + '\n' +
                       'source python-3.5.1\n' +
