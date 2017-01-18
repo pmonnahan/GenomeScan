@@ -215,8 +215,8 @@ class PopGen:
         if os.path.exists(recode_dir) is True:
             summary = open(recode_dir + "WPMInputSummary.txt", 'w')
             summary.write('VCF Directory = ' + self.vcf_dir + '\n' +
-                          'Window size in bp = ' + window_size + '\n' +
-                          "Minimum number of SNPs per window  = " + min_snps + "\n")
+                          'Window size in bp = ' + str(window_size) + '\n' +
+                          "Minimum number of SNPs per window  = " + str(min_snps) + "\n")
             summary.close()
 
             for pop in self.pops:
