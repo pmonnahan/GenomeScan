@@ -66,10 +66,11 @@ class PopGen:
             print("Population does not exist")
 
 
-    def splitVCFs(self, vcf_dir, ref_path, mem=16000, numcores=1,print1=False, overwrite=False):
+    def splitVCFs(self, vcf_dir, ref_path, mem=16000, numcores=1, print1=False, overwrite=False):
         if vcf_dir.endswith("/") is False:
             vcf_dir += "/"
         outdir = self.split_dir
+        self.vcf_dir = vcf_dir
 
         mem1 = int(mem / 1000)
 
@@ -245,7 +246,7 @@ class PopGen:
 
                 os.remove(pop + '.sh')
         else:
-            print("Must run splitVCFs followed by recode before able to calculate within population metrics")
+            print("Did not find recode_dir.  Must run splitVCFs followed by recode before able to calculate within population metrics")
 
     def calcpairwisebpm(self, recode_dir, pop1, pop2, window_size, minimum_snps, print1=False, mem=16000, numcores=1):
 
@@ -281,4 +282,4 @@ class PopGen:
             os.remove(pop1 + 'v' + pop2 + '.sh')
 
         else:
-            print("Must run splitVCFs followed by recode before able to calculate between population metrics")
+            print("Did not find recode_dir.  Must run splitVCFs followed by recode before able to calculate between population metrics")
