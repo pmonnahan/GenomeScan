@@ -54,7 +54,7 @@ class PopGen:
     def removePop(self, popname):
         popname = str(popname)
         if popname in self.pops:
-            self.pops.pop(popname)
+            self.pops.remove(popname)
             self.samps.pop(popname,None)
             self.samp_nums.pop(popname, None)
             # Recalculate min_ind
