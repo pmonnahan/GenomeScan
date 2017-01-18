@@ -43,7 +43,6 @@ class PopGen:
         self.pops = POP_names
         self.samps = samps
         self.min_ind = min_ind
-        self.samp_ind = sampind
         self.dir = WorkingDir
         self.oande = WorkingDir + "OandE/"
 
