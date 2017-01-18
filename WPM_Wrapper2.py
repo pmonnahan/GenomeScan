@@ -65,11 +65,13 @@ class PopGen:
             print("Population does not exist")
 
 
-    def splitVCFs(self, vcf_dir, ref_path, mem='16000', print1=False, overwrite=False):
+    def splitVCFs(self, vcf_dir, ref_path, mem=16000, print1=False, overwrite=False):
         if vcf_dir.endswith("/") is False:
             vcf_dir += "/"
         outdir = self.dir + "VCFs/"
         self.split_dir = outdir
+
+        mem1 = mem / 1000
 
         if os.path.exists(outdir) is False:
             os.mkdir(outdir)
@@ -105,11 +107,11 @@ class PopGen:
                               '#SBATCH -p nbi-medium\n' +
                               '#SBATCH -n 1\n' +
                               '#SBATCH -t 0-4:00\n' +
-                              '#SBATCH --mem=' + mem + '\n' +
+                              '#SBATCH --mem=' + str(mem) + '\n' +
                               'source GATK-3.6.0\n' +
-                              'java -Xmx16g -jar /nbi/software/testing/GATK/3.6.0/src/GenomeAnalysisTK.jar -T SelectVariants -R ' + ref_path + ' -V ' + vcf_dir + vcf + sample_string1 + ' -o ' + outdir + vcf_basenames[v] + '.' + pop + '.vcf\n' +
-                              'java -Xmx16g -jar /nbi/software/testing/GATK/3.6.0/src/GenomeAnalysisTK.jar -T SelectVariants -R ' + ref_path + ' -V ' + outdir + vcf_basenames[v] + '.' + pop + '.vcf --restrictAllelesTo BIALLELIC -env -o ' + outdir + vcf_basenames[v] + '.' + pop + '.bi.vcf\n' +
-                              'java -Xmx16g -jar /nbi/software/testing/GATK/3.6.0/src/GenomeAnalysisTK.jar -T VariantsToTable -R ' + ref_path + ' -V ' + outdir + vcf_basenames[v] + '.' + pop + '.bi.vcf -F CHROM -F POS -F AC -F AN -F DP -GF GT -o ' + outdir + vcf_basenames[v] + '.' + pop + '_raw.table\n'
+                              'java -Xmx' + int(mem1) + 'g -jar /nbi/software/testing/GATK/3.6.0/src/GenomeAnalysisTK.jar -T SelectVariants -R ' + ref_path + ' -V ' + vcf_dir + vcf + sample_string1 + ' -o ' + outdir + vcf_basenames[v] + '.' + pop + '.vcf\n' +
+                              'java -Xmx' + int(mem1) + 'g -jar /nbi/software/testing/GATK/3.6.0/src/GenomeAnalysisTK.jar -T SelectVariants -R ' + ref_path + ' -V ' + outdir + vcf_basenames[v] + '.' + pop + '.vcf --restrictAllelesTo BIALLELIC -env -o ' + outdir + vcf_basenames[v] + '.' + pop + '.bi.vcf\n' +
+                              'java -Xmx' + int(mem1) + 'g -jar /nbi/software/testing/GATK/3.6.0/src/GenomeAnalysisTK.jar -T VariantsToTable -R ' + ref_path + ' -V ' + outdir + vcf_basenames[v] + '.' + pop + '.bi.vcf -F CHROM -F POS -F AC -F AN -F DP -GF GT -o ' + outdir + vcf_basenames[v] + '.' + pop + '_raw.table\n'
                               'gzip ' + outdir + vcf_basenames[v] + '.' + pop + '.vcf')
                 shfile1.close()
 
@@ -126,33 +128,33 @@ class PopGen:
 
                 os.remove(pop + '.sh')
 
-                # combine all variants table for each scaffold within a population
-                shfile3 = open(pop + '.sh', 'w')
+            # combine all variants table for each scaffold within a population
+            shfile3 = open(pop + '.sh', 'w')
 
-                shfile3.write('#!/bin/bash\n' +
-                              '#SBATCH -J ' + pop + '.sh' + '\n' +
-                              '#SBATCH -e ' + self.oande + pop + '.cat.err' + '\n' +
-                              '#SBATCH -o ' + self.oande + pop + '.cat.out' + '\n' +
-                              '#SBATCH -p nbi-long\n' +
-                              '#SBATCH -n 1\n' +
-                              '#SBATCH -t 0-12:00\n' +
-                              '#SBATCH --mem=32000\n' +
-                              'cat ' + outdir + '*' + pop + '_raw.table | tail -n+2 > ' + outdir + pop + '.table\n')
-                shfile3.close()
+            shfile3.write('#!/bin/bash\n' +
+                          '#SBATCH -J ' + pop + '.sh' + '\n' +
+                          '#SBATCH -e ' + self.oande + pop + '.cat.err' + '\n' +
+                          '#SBATCH -o ' + self.oande + pop + '.cat.out' + '\n' +
+                          '#SBATCH -p nbi-long\n' +
+                          '#SBATCH -n 1\n' +
+                          '#SBATCH -t 0-12:00\n' +
+                          '#SBATCH --mem=' + str(mem) + '\n' +
+                          'cat ' + outdir + '*' + pop + '_raw.table | tail -n+2 > ' + outdir + pop + '.table\n')
+            shfile3.close()
 
-                if print1 is False:
-                    cmd3 = ('sbatch -d singleton ' + pop + '.sh')
-                    p3 = subprocess.Popen(cmd3, shell=True)
-                    sts3 = os.waitpid(p3.pid, 0)[1]
-                else:
-                    file3 = open(pop + '.sh', 'r')
-                    data3 = file3.read()
-                    print(data3)
+            if print1 is False:
+                cmd3 = ('sbatch -d singleton ' + pop + '.sh')
+                p3 = subprocess.Popen(cmd3, shell=True)
+                sts3 = os.waitpid(p3.pid, 0)[1]
+            else:
+                file3 = open(pop + '.sh', 'r')
+                data3 = file3.read()
+                print(data3)
 
-                os.remove(pop + '.sh')
+            os.remove(pop + '.sh')
 
 
-    def recode(self, min_avg_dp, missingness, print1=False):
+    def recode(self, min_avg_dp, missingness, print1=False, mem=16000):
 
         sampind = int(math.ceil(self.min_ind * (1.0 - missingness)))
         if sampind == self.min_ind and missingness != 0.0:
@@ -167,38 +169,38 @@ class PopGen:
             for file in os.listdir(recode_dir):
                 if file.endswith('.table.recode.txt'):
                     existing_files.append(file.split('.')[0])
-            if set(self.pops).issuperset(set(existing_files)) is True:
-                print("Recoded vcf files already exist.  Delete folder or change parameters")
-            # Look for '.recode' table files corresponding to POP_names...if they exist...skip all but wpm step and print message to output.
+        if set(self.pops).issuperset(set(existing_files)) is True:
+            print("Recoded vcf files already exist.  Delete folder or change parameters")
+        # Look for '.recode' table files corresponding to POP_names...if they exist...skip all but wpm step and print message to output.
 
-            else:
-                for pop in self.pops:
-                    # FORMAT TABLE FOR WPM FILE.
+        else:
+            for pop in self.pops:
+                # FORMAT TABLE FOR WPM FILE.
 
-                    shfile3 = open(pop + '.sh', 'w')
-                    shfile3.write('#!/bin/bash\n' +
-                                  '#SBATCH -J ' + pop + '.sh' + '\n' +
-                                  '#SBATCH -e ' + self.oande + pop + '.recode012.err' + '\n' +
-                                  '#SBATCH -o ' + self.oande + pop + '.recode012.out' + '\n' +
-                                  '#SBATCH -p nbi-long\n' +
-                                  '#SBATCH -n 1\n' +
-                                  '#SBATCH -t 1-00:00\n' +
-                                  '#SBATCH --mem=32000\n' +
-                                  'source python-3.5.1\n' +
-                                  'source env/bin/activate\n' +
-                                  'python3 /usr/users/JIC_c1/monnahap/GenomeScan/recode012.py -i ' + self.split_dir + pop + '.table -pop ' + pop + ' -mf ' + str(1.0 - missingness) + ' -dp ' + str(min_avg_dp) + ' -o ' + recode_dir + '\n')
-                    shfile3.close()
+                shfile3 = open(pop + '.sh', 'w')
+                shfile3.write('#!/bin/bash\n' +
+                              '#SBATCH -J ' + pop + '.sh' + '\n' +
+                              '#SBATCH -e ' + self.oande + pop + '.recode012.err' + '\n' +
+                              '#SBATCH -o ' + self.oande + pop + '.recode012.out' + '\n' +
+                              '#SBATCH -p nbi-long\n' +
+                              '#SBATCH -n 1\n' +
+                              '#SBATCH -t 1-00:00\n' +
+                              '#SBATCH --mem=' + str(mem) + '\n' +
+                              'source python-3.5.1\n' +
+                              'source env/bin/activate\n' +
+                              'python3 /usr/users/JIC_c1/monnahap/GenomeScan/recode012.py -i ' + self.split_dir + pop + '.table -pop ' + pop + ' -mf ' + str(1.0 - missingness) + ' -dp ' + str(min_avg_dp) + ' -o ' + recode_dir + '\n')
+                shfile3.close()
 
-                    if print1 is True:
-                        cmd3 = ('sbatch -d singleton ' + pop + '.sh')
-                        p3 = subprocess.Popen(cmd3, shell=True)
-                        sts3 = os.waitpid(p3.pid, 0)[1]
-                    else:
-                        file3 = open(pop + '.sh', 'r')
-                        data3 = file3.read()
-                        print(data3)
+                if print1 is True:
+                    cmd3 = ('sbatch -d singleton ' + pop + '.sh')
+                    p3 = subprocess.Popen(cmd3, shell=True)
+                    sts3 = os.waitpid(p3.pid, 0)[1]
+                else:
+                    file3 = open(pop + '.sh', 'r')
+                    data3 = file3.read()
+                    print(data3)
 
-                    os.remove(pop + '.sh')
+                os.remove(pop + '.sh')
 
     # CALCULATE WITHIN POPULATION METRICS
     def calcwpm(self, recode_dir, window_size, min_snps, print1=False, mem=16000):
