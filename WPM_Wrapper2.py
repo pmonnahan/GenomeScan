@@ -50,6 +50,7 @@ class PopGen:
         self.min_ind = min_ind
         self.dir = WorkingDir
         self.oande = WorkingDir + "OandE/"
+        self.split_dir = self.dir + "VCFs/"
 
 
     def removePop(self, popname):
@@ -68,8 +69,7 @@ class PopGen:
     def splitVCFs(self, vcf_dir, ref_path, mem=16000, numcores=1,print1=False, overwrite=False):
         if vcf_dir.endswith("/") is False:
             vcf_dir += "/"
-        outdir = self.dir + "VCFs/"
-        self.split_dir = outdir
+        outdir = self.split_dir
 
         mem1 = int(mem / 1000)
 
@@ -162,36 +162,79 @@ class PopGen:
         self.samp_ind = sampind
         # Determine if the recoded vcf files already exist and if so, set VCF_Parse to False
         recode_dir = self.dir + "Recoded.DP" + str(min_avg_dp) + ".M" + str(missingness) + "/"
-        existing_files = []
-        if os.path.exists(recode_dir) is False:
-            os.mkdir(recode_dir)
-        else:
-            for file in os.listdir(recode_dir):
-                if file.endswith('.table.recode.txt'):
-                    existing_files.append(file.split('.')[0])
-        if set(self.pops).issuperset(set(existing_files)) is True and len(existing_files) != 0:
-            print("Recoded vcf files already exist.  Delete folder or change parameters")
-        # Look for '.recode' table files corresponding to POP_names...if they exist...skip all but wpm step and print message to output.
+        if os.path.exists(self.split_dir) is True:
+            existing_files = []
+            if os.path.exists(recode_dir) is False:
+                os.mkdir(recode_dir)
+            else:
+                for file in os.listdir(recode_dir):
+                    if file.endswith('.table.recode.txt'):
+                        existing_files.append(file.split('.')[0])
+            if set(self.pops).issuperset(set(existing_files)) is True and len(existing_files) != 0:
+                print("Recoded vcf files already exist.  Delete folder or change parameters")
+            # Look for '.recode' table files corresponding to POP_names...if they exist...skip all but wpm step and print message to output.
 
+            else:
+                for pop in self.pops:
+                    # FORMAT TABLE FOR WPM FILE.
+
+                    shfile3 = open(pop + '.sh', 'w')
+                    shfile3.write('#!/bin/bash\n' +
+                                  '#SBATCH -J ' + pop + '.sh' + '\n' +
+                                  '#SBATCH -e ' + self.oande + pop + '.recode012.err' + '\n' +
+                                  '#SBATCH -o ' + self.oande + pop + '.recode012.out' + '\n' +
+                                  '#SBATCH -p nbi-medium\n' +
+                                  '#SBATCH -n ' + str(numcores) + '\n' +
+                                  '#SBATCH -t 1-00:00\n' +
+                                  '#SBATCH --mem=' + str(mem) + '\n' +
+                                  'source python-3.5.1\n' +
+                                  'source env/bin/activate\n' +
+                                  'python3 /usr/users/JIC_c1/monnahap/GenomeScan/recode012.py -i ' + self.split_dir + pop + '.table -pop ' + pop + ' -mf ' + str(1.0 - missingness) + ' -dp ' + str(min_avg_dp) + ' -o ' + recode_dir + '\n')
+                    shfile3.close()
+
+                    if print1 is True:
+                        cmd3 = ('sbatch -d singleton ' + pop + '.sh')
+                        p3 = subprocess.Popen(cmd3, shell=True)
+                        sts3 = os.waitpid(p3.pid, 0)[1]
+                    else:
+                        file3 = open(pop + '.sh', 'r')
+                        data3 = file3.read()
+                        print(data3)
+
+                    os.remove(pop + '.sh')
         else:
+            print("Must run splitVCFs prior to running recode")
+
+    # CALCULATE WITHIN POPULATION METRICS
+    def calcwpm(self, recode_dir, window_size, min_snps, print1=False, mem=16000, numcores=1):
+
+        if recode_dir.endswith("/") is False:
+            recode_dir += "/"
+
+        if os.path.exists(recode_dir) is True:
+            summary = open(recode_dir + "WPMInputSummary.txt", 'w')
+            summary.write('VCF Directory = ' + self.vcf_dir + '\n' +
+                          'Window size in bp = ' + window_size + '\n' +
+                          "Minimum number of SNPs per window  = " + min_snps + "\n")
+            summary.close()
+
             for pop in self.pops:
-                # FORMAT TABLE FOR WPM FILE.
-
                 shfile3 = open(pop + '.sh', 'w')
+
                 shfile3.write('#!/bin/bash\n' +
                               '#SBATCH -J ' + pop + '.sh' + '\n' +
-                              '#SBATCH -e ' + self.oande + pop + '.recode012.err' + '\n' +
-                              '#SBATCH -o ' + self.oande + pop + '.recode012.out' + '\n' +
+                              '#SBATCH -e ' + self.oande + pop + '.wpm.err' + '\n' +
+                              '#SBATCH -o ' + self.oande + pop + '.wpm.out' + '\n' +
                               '#SBATCH -p nbi-medium\n' +
                               '#SBATCH -n ' + str(numcores) + '\n' +
                               '#SBATCH -t 1-00:00\n' +
-                              '#SBATCH --mem=' + str(mem) + '\n' +
+                              '#SBATCH --mem=' +str(mem) + '\n' +
                               'source python-3.5.1\n' +
                               'source env/bin/activate\n' +
-                              'python3 /usr/users/JIC_c1/monnahap/GenomeScan/recode012.py -i ' + self.split_dir + pop + '.table -pop ' + pop + ' -mf ' + str(1.0 - missingness) + ' -dp ' + str(min_avg_dp) + ' -o ' + recode_dir + '\n')
+                              'python3 /usr/users/JIC_c1/monnahap/GenomeScan/wpm.py -i ' + recode_dir + pop + '.table.recode.txt -o ' + recode_dir + ' -sampind ' + str(self.samp_ind) + ' -ws ' + str(window_size) + ' -ms ' + str(min_snps) + '\n')
                 shfile3.close()
 
-                if print1 is True:
+                if print1 is False:
                     cmd3 = ('sbatch -d singleton ' + pop + '.sh')
                     p3 = subprocess.Popen(cmd3, shell=True)
                     sts3 = os.waitpid(p3.pid, 0)[1]
@@ -201,70 +244,41 @@ class PopGen:
                     print(data3)
 
                 os.remove(pop + '.sh')
+        else:
+            print("Must run splitVCFs followed by recode before able to calculate within population metrics")
 
-    # CALCULATE WITHIN POPULATION METRICS
-    def calcwpm(self, recode_dir, window_size, min_snps, print1=False, mem=16000, numcores=1):
+    def calcpairwisebpm(self, recode_dir, pop1, pop2, window_size, minimum_snps, print1=False, mem=16000, numcores=1):
 
         if recode_dir.endswith("/") is False:
             recode_dir += "/"
 
-        summary = open(recode_dir + "WPMInputSummary.txt", 'w')
-        summary.write('VCF Directory = ' + self.vcf_dir + '\n' +
-                      'Window size in bp = ' + window_size + '\n' +
-                      "Minimum number of SNPs per window  = " + min_snps + "\n")
-        summary.close()
+        if os.path.exists(recode_dir) is True:
 
-        for pop in self.pops:
-            shfile3 = open(pop + '.sh', 'w')
+            shfile3 = open(pop1 + 'v' + pop2 + '.sh', 'w')
 
             shfile3.write('#!/bin/bash\n' +
-                          '#SBATCH -J ' + pop + '.sh' + '\n' +
-                          '#SBATCH -e ' + self.oande + pop + '.wpm.err' + '\n' +
-                          '#SBATCH -o ' + self.oande + pop + '.wpm.out' + '\n' +
+                          '#SBATCH -J ' + pop1 + 'v' + pop2 + '.bpm.sh' + '\n' +
+                          '#SBATCH -e ' + self.oande + pop1 + 'v' + pop2 + '.bpm.err' + '\n' +
+                          '#SBATCH -o ' + self.oande + pop1 + 'v' + pop2 + '.bpm.out' + '\n' +
                           '#SBATCH -p nbi-medium\n' +
                           '#SBATCH -n ' + str(numcores) + '\n' +
                           '#SBATCH -t 1-00:00\n' +
-                          '#SBATCH --mem=' +str(mem) + '\n' +
+                          '#SBATCH --mem=' + str(mem) + '\n' +
                           'source python-3.5.1\n' +
                           'source env/bin/activate\n' +
-                          'python3 /usr/users/JIC_c1/monnahap/GenomeScan/wpm.py -i ' + recode_dir + pop + '.table.recode.txt -o ' + recode_dir + ' -sampind ' + str(self.samp_ind) + ' -ws ' + str(window_size) + ' -ms ' + str(min_snps) + '\n')
+                          'python3 /usr/users/JIC_c1/monnahap/GenomeScan/bpm.py -i1 ' + recode_dir + pop1 + '.table.recode.txt -i1 ' + recode_dir + pop2 + '.table.recode.txt -o ' + recode_dir + ' -ws ' + str(window_size) + ' -ms ' + str(minimum_snps) + '\n')
             shfile3.close()
 
             if print1 is False:
-                cmd3 = ('sbatch -d singleton ' + pop + '.sh')
+                cmd3 = ('sbatch -d singleton ' + pop1 + 'v' + pop2 + '.sh')
                 p3 = subprocess.Popen(cmd3, shell=True)
                 sts3 = os.waitpid(p3.pid, 0)[1]
             else:
-                file3 = open(pop + '.sh', 'r')
+                file3 = open(pop1 + 'v' + pop2 + '.sh', 'r')
                 data3 = file3.read()
                 print(data3)
 
-            os.remove(pop + '.sh')
+            os.remove(pop1 + 'v' + pop2 + '.sh')
 
-    def calcpairwisebpm(self, recode_dir, pop1, pop2, window_size, minimum_snps, print1=False, mem=16000, numcores=1):
-
-        shfile3 = open(pop1 + 'v' + pop2 + '.sh', 'w')
-
-        shfile3.write('#!/bin/bash\n' +
-                      '#SBATCH -J ' + pop1 + 'v' + pop2 + '.bpm.sh' + '\n' +
-                      '#SBATCH -e ' + self.oande + pop1 + 'v' + pop2 + '.bpm.err' + '\n' +
-                      '#SBATCH -o ' + self.oande + pop1 + 'v' + pop2 + '.bpm.out' + '\n' +
-                      '#SBATCH -p nbi-medium\n' +
-                      '#SBATCH -n ' + str(numcores) + '\n' +
-                      '#SBATCH -t 1-00:00\n' +
-                      '#SBATCH --mem=' + str(mem) + '\n' +
-                      'source python-3.5.1\n' +
-                      'source env/bin/activate\n' +
-                      'python3 /usr/users/JIC_c1/monnahap/GenomeScan/bpm.py -i1 ' + recode_dir + pop1 + '.table.recode.txt -i1 ' + recode_dir + pop2 + '.table.recode.txt -o ' + recode_dir + ' -ws ' + str(window_size) + ' -ms ' + str(minimum_snps) + '\n')
-        shfile3.close()
-
-        if print1 is False:
-            cmd3 = ('sbatch -d singleton ' + pop1 + 'v' + pop2 + '.sh')
-            p3 = subprocess.Popen(cmd3, shell=True)
-            sts3 = os.waitpid(p3.pid, 0)[1]
         else:
-            file3 = open(pop1 + 'v' + pop2 + '.sh', 'r')
-            data3 = file3.read()
-            print(data3)
-
-        os.remove(pop1 + 'v' + pop2 + '.sh')
+            print("Must run splitVCFs followed by recode before able to calculate between population metrics")
