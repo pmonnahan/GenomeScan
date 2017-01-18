@@ -71,7 +71,7 @@ class PopGen:
         outdir = self.dir + "VCFs/"
         self.split_dir = outdir
 
-        mem1 = mem / 1000
+        mem1 = int(mem / 1000)
 
         if os.path.exists(outdir) is False:
             os.mkdir(outdir)
