@@ -16,38 +16,62 @@ def calcPairwiseBPM(input_file1, input_file2, output, outname, window_size, mini
         locus = []
         for l in locus_list:
             try:
-                locus.append(l.remove("-9"))
+                l.remove("-9")
+                locus.append(l)
             except ValueError:
                 locus.append(l)
-        min_ind = min([len(x[7:]) for x in locus])
-        # Do rho calcs for site
-        X_i = []
+        r = float(len(locus))
+        n_bar = float(sum([len(x[7:]) for x in locus]) / r)
+        p_i = []
         sss = 0.0
         ssi = 0.0
         s1 = 0.0
         s2 = 0.0
-        ni = []
+        n_i = []
         ploidy_list = []
+        P_i = []
         for pop_site in locus:
-            ploidy = int(pop_site[1])
-            num_ind = len(pop_site[7:])  # THIS MUST BE CHANGED IF DOWNSAMPLING IS IMPLEMENTED
-            x_i = sum([float(geno) for geno in pop_site[7:]]) / (num_ind * ploidy)
-            ni.append(num_ind)
-            X_i.append(x_i)
+            ploidy = float(pop_site[1])
+            nnn = float(len(pop_site[7:]))
+            an = ploidy * nnn
+            ac = sum([float(geno) for geno in pop_site[7:]])
+            n_i.append(nnn)
+            p_i.append(ac / an)
             ploidy_list.append(ploidy)
-            s1 += num_ind
-            s2 += num_ind**2
-            for ind in pop_site[7:]:
-                x_g = float(ind) / float(ploidy)
-                ssi += ((x_g - x_i)**2) * float(ploidy)
-        X_bar = numpy.mean(X_i)
+            s1 += nnn
+            s2 += nnn**2
+            P = 0.0
+            if ploidy == 4.0:
+                for ind in pop_site[7:]:
+                    if float(ind) == 1.0:
+                        P += 0.5
+                    if float(ind) == 2.0:
+                        P += 0.667
+                    if float(ind) == 0.0:
+                        P += 1.0
+            if ploidy == 2.0:  # Not confident that this is correct approach for calculating P for diploids
+                for ind in pop_site[7:]:
+                    if float(ind) == 1.0:
+                        P += 0.5
+                    if float(ind) == 0.0:
+                        P += 1.0
+
+            P_i.append(P / nnn)
+
+        p_bar = sum([k * n_i[i] for i, k in enumerate(p_i)]) / (r * n_bar)
         wa = s1 - (s2 / s1)
-        wd = s1 - len(locus)
-        ww = len(locus) - 1
-        for i, x in enumerate(X_i):
-            sss += ((x - X_bar)**2) * ni[i] * ploidy_list[i]
+        wd = s1 - r
+        ww = r - 1.0
+        for i, x in enumerate(p_i):
+            sss += ((x - p_bar)**2) * n_i[i] * 4
+            ssi += n_i[i] * (x + 3 * P_i[i] - 4 * x**2)  # confirmed calculations by hand, but still getting hugely negative numerator
+            # print(sss,ssi)
         num = (wd * sss) - (ww * ssi)
         den = (wa * ssi)
+        print(locus)
+        print(num, den)
+        print(p_i,p_bar)
+        print(P_i)
 
         return [num, den]
 
@@ -56,14 +80,15 @@ def calcPairwiseBPM(input_file1, input_file2, output, outname, window_size, mini
         locus = []
         for l in locus_list:
             try:
-                locus.append(l.remove("-9"))
+                l.remove('-9')
+                locus.append(l)
             except ValueError:
                 locus.append(l)
         r = float(len(locus))
         n_bar = float(sum([len(x[7:]) for x in locus]) / r)
         j = float(sum([len(x[7:])**2 for x in locus]))
         n_C = (r * n_bar - j / (r * n_bar)) / (r - 1.0)
-        p_bar_i = []
+        p_i = []
         n_i = []
         h_i = []
 
@@ -73,7 +98,7 @@ def calcPairwiseBPM(input_file1, input_file2, output, outname, window_size, mini
             an = ploidy * nnn
             ac = sum([float(geno) for geno in pop_site[7:]])
             n_i.append(nnn)
-            p_bar_i.append(ac / an)
+            p_i.append(ac / an)
             h = 0.0
             if ploidy == 4.0:
                 for ind in pop_site[7:]:
@@ -83,22 +108,30 @@ def calcPairwiseBPM(input_file1, input_file2, output, outname, window_size, mini
                         h += 0.667
             if ploidy == 2.0:
                 for ind in pop_site[7:]:
-                    if float(ind) == 2.0:
+                    if float(ind) == 1.0:
                         h += 1.0
 
             h_i.append(h / nnn)
 
-        p_bar = sum([k * n_i[i] for i, k in enumerate(p_bar_i)]) / (r * n_bar)
-        h_bar = sum([k * n_i[i] for i, k in enumerate(p_bar_i)]) / (r * n_bar)
+        p_bar = sum([k * n_i[i] for i, k in enumerate(p_i)]) / (r * n_bar)
+        h_bar = sum([k * n_i[i] for i, k in enumerate(h_i)]) / (r * n_bar)
 
         var_p = 0.0
-        for i, p in enumerate(p_bar_i):
+        for i, p in enumerate(p_i):
             var_p += (n_i[i] * (p - p_bar)**2) / ((r - 1) * n_bar)
 
-        a = (n_bar * n_C) * (var_p - ((1.0 / (n_bar - 1.0)) * ((p_bar * (1.0 - p_bar)) - (((r - 1.0) / r) * var_p) - (0.25 * h_bar))))
-        b = (n_bar / (n_bar - 1.0)) * ((p_bar * (1.0 - p_bar)) - (((r - 1.0) / r) * var_p) - (((2.0 * (n_bar - 1.0)) / (4.0 * n_bar)) * h_bar))
+        a = (n_bar / n_C) * (var_p - ((1.0 / (n_bar - 1.0)) * ((p_bar * (1.0 - p_bar)) - (((r - 1.0) / r) * var_p) - (0.25 * h_bar))))
+        b = (n_bar / (n_bar - 1.0)) * ((p_bar * (1.0 - p_bar)) - (((r - 1.0) / r) * var_p) - (((2.0 * n_bar - 1.0) / (4.0 * n_bar)) * h_bar))
         c = 0.5 * h_bar
         d = (a + b + c)
+
+        # print('here1', locus)
+        # print('here2', r, n_bar, j, n_C)  # Confirmed calculations by hand, but still get negative numbers when var_p is low
+        # print('p_i', p_i)
+        # print('n_i', n_i)
+        # print('h_i', h_i)
+        # print('here3', p_bar, h_bar, var_p)
+        # print("here4",a,b,c,d)
 
         return [a, d]
 
@@ -107,7 +140,8 @@ def calcPairwiseBPM(input_file1, input_file2, output, outname, window_size, mini
         locus = []
         for l in locus_info:
             try:
-                locus.append(l.remove("-9"))
+                l.remove('-9')
+                locus.append(l)
             except ValueError:
                 locus.append(l)
 
@@ -127,12 +161,14 @@ def calcPairwiseBPM(input_file1, input_file2, output, outname, window_size, mini
 
 
     # Concatenate input files and sort them
+    print("Concatenating input files and sorting by scaffold and position")
     in1 = open(input_file1, 'r').readlines()
     in2 = open(input_file2, 'r').readlines()
-    in1 = [j.split("\t") for j in in1]
-    in2 = [j.split("\t") for j in in2]
+    in1 = [j.strip("\n").strip("\t").split("\t") for j in in1]
+    in2 = [j.strip("\n").strip("\t").split("\t") for j in in2]
     data = in1 + in2
     data = sorted(data, key=lambda k: (int(k[2].split("_")[1]), int(k[3])))  # Sorts by scaffold then position
+    print("Finished preparing input data")
 
 
     snp_count = 0
@@ -148,11 +184,12 @@ def calcPairwiseBPM(input_file1, input_file2, output, outname, window_size, mini
     # To downsample or not to downsample??
     # Cat files prior running script and sort by scaffold and position
     # Does not handle missing data currently
-    for i, line in enumerate(data):
 
-        line = line.strip("\n")
-        line = line.strip("\t")
-        line = line.split("\t")
+    # play = [['PO1', '2.0', 'scaffold_1', '1234', '10', '20', '500', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1'], ['PO1', '2.0', 'scaffold_1', '1234', '0', '20', '500', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0']]
+    # play1 = [['PO1', '4.0', 'scaffold_1', '1234', '10', '20', '500', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2'], ['PO1', '4.0', 'scaffold_1', '1234', '0', '20', '500', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0']]
+    
+    # ff = calcFst(play1)
+    for i, line in enumerate(data):
 
         pop, ploidy, scaff, pos, ac, an, dp = line[:7]
         pos = float(pos)
@@ -174,7 +211,7 @@ def calcPairwiseBPM(input_file1, input_file2, output, outname, window_size, mini
         if pos > start and pos <= end and scaff == oldscaff:
             if pos == old_pos:  # Accruing information from multiple populations but same locus
                 Locus.append(line)
-                if Snp_count == 0.0:
+                if Snp_count == 0.0 and i != 0:
                     pop2 = pop
                     assert pop1 != pop2
             elif len(Locus) == 2:  # Within current window but have moved on from previous locus
@@ -182,7 +219,7 @@ def calcPairwiseBPM(input_file1, input_file2, output, outname, window_size, mini
                 new_fst = calcFst(Locus)
                 dxy += calcDxy(Locus)
                 Dxy += dxy
-                snp_count += j
+                snp_count += 1
                 fst = [sum(x) for x in zip(fst, new_fst)]
                 rho = [sum(x) for x in zip(rho, new_rho)]
                 Fst = [sum(x) for x in zip(Fst, new_fst)]
@@ -201,8 +238,8 @@ def calcPairwiseBPM(input_file1, input_file2, output, outname, window_size, mini
         elif int(pos) > end or scaff != oldscaff:
             if len(Locus) == 2:  # Current snp is onto next window, but must do calculation for previous locus before moving on
                 snp_count += 1
-                n, d, j = calcRho(Locus)
-                a, b, c = calcFst(Locus)
+                new_rho = calcRho(Locus)
+                new_fst = calcFst(Locus)
                 dxy += calcDxy(Locus)
                 Dxy += dxy
                 fst = [sum(x) for x in zip(fst, new_fst)]
@@ -213,6 +250,7 @@ def calcPairwiseBPM(input_file1, input_file2, output, outname, window_size, mini
             if snp_count >= minimum_snps:  # Use or exclude window from
                 Snp_count += snp_count
                 num_wind += 1
+                print(fst, rho)
                 fst = fst[0] / fst[1]
                 fac = rho[0] / rho[1]
                 rho_i = fac / (1 + fac)
@@ -235,6 +273,7 @@ def calcPairwiseBPM(input_file1, input_file2, output, outname, window_size, mini
             rho = [0.0, 0.0]  # Rho[0] is numerator for window, [1] is denominator for window
             dxy = 0.0
 
+            # Moving on to deal with current SNP.  Must reset window boundaries based on current position
             if float(pos) > end:
                 while float(pos) > end:
                     end += window_size
@@ -252,8 +291,8 @@ def calcPairwiseBPM(input_file1, input_file2, output, outname, window_size, mini
 
     if len(Locus) == 2:  # Final window calculations
         snp_count += 1
-        n, d = calcRho(Locus)
-        a, b, c = calcFst(Locus)
+        new_rho = calcRho(Locus)
+        new_fst = calcFst(Locus)
         dxy += calcDxy(Locus)
         Dxy += dxy
         fst = [sum(x) for x in zip(fst, new_fst)]
