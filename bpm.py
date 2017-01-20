@@ -2,15 +2,136 @@
 Input file custom: Filename should end with _XXX_raw.table.recode.txt, where XXX is three-letter population abbreviation"""
 
 import argparse
-import numpy
 
 # export PYTHONPATH="$PYTHONPATH:/Users/monnahap/Documents/Research/code/GenomeScan/"
 
 # Use 'sort <filename> -k3,3 -k4,4n > rho_test3.sort.txt' to sort by scaffold and then position (numerically)
-
+# Nevermind, integrated file concatenation and sorting into this script
 
 # Substitute missingness for number of individuals to downsample to.  That way you can enter one number for all populations to be downsampled to.
+
+
 def calcPairwiseBPM(input_file1, input_file2, output, outname, window_size, minimum_snps):
+
+    def NestedAnova(locus_list):
+        locus = []
+        for l in locus_list:
+            try:
+                l.remove("-9")
+                locus.append(l)
+            except ValueError:
+                locus.append(l)
+        r = float(len(locus))
+        p_i = []
+        n_i = []
+        ploidy_list = []
+        Fssg = 0.0
+        Fssi = 0.0
+        Fssw = 0.0
+        Fsst = 0.0
+        Rssg = 0.0
+        Rssi = 0.0
+        Rsst = 0.0
+        p_ij = []
+        tac = 0
+        tan = 0
+        ac_ij = []
+        df_w = 0.0
+        FS_Nij2 = 0.0  # Attempting to mirror spagedi code
+        FS_SNij2 = 0.0
+        RS_Nij2 = 0.0  # Attempting to mirror spagedi code
+        RS_SNij2 = 0.0
+        FS_SNij2_over_SNij = 0.0
+        for pop_site in locus:
+            FSNij2temp = 0.0
+            RSNij2temp = 0.0
+            p = []
+            ac_i = []
+            ploidy = float(pop_site[1])
+            nnn = float(len(pop_site[7:]))
+            an = ploidy * nnn
+            ac = sum([float(geno) for geno in pop_site[7:]])
+            n_i.append(nnn)
+            p_i.append(ac / an)
+            ploidy_list.append(ploidy)
+            pop_an = 0
+            for ind in pop_site[7:]:
+                p_ind = float(ind) / ploidy
+                p.append(p_ind)
+                ac_i.append(float(ind))
+                num_alleles = 0
+                for c in range(0, int(ploidy) - int(ind)):
+                    num_alleles += 1
+                    tan += 1
+                for c in range(0, int(ind)):
+                    num_alleles += 1
+                    tac += 1
+                    tan += 1
+                FS_Nij2 += ploidy**2
+                RS_Nij2 += 1.0
+                FSNij2temp += ploidy**2
+                RSNij2temp += 1.0
+                pop_an += ploidy
+                assert num_alleles == int(ploidy)
+                df_w += float(num_alleles) - 1.0
+            FS_SNij2_over_SNij += FSNij2temp / pop_an
+            FS_SNij2 += pop_an**2
+            RS_SNij2 += nnn**2
+            p_ij.append(p)
+            ac_ij.append(ac_i)
+
+
+        p_bar = float(tac) / float(tan)
+        df_g = r - 1.0
+        df_i = sum([x - 1.0 for x in n_i])
+        df_t = df_g + df_i + df_w
+        fn0bis = (FS_SNij2_over_SNij - (FS_Nij2 / tan)) / df_g
+        fn0 = (tan - FS_SNij2_over_SNij) / df_i
+        fnb0 = (tan - (FS_SNij2 / tan)) / df_g
+
+        rnb0 = (float(sum(n_i)) - (RS_SNij2 / float(sum(n_i)))) / df_g
+
+        assert df_t == float(tan) - 1.0
+        for i, pop in enumerate(ac_ij):
+            for j, ind in enumerate(pop):
+                for ref in range(0, int(int(ploidy_list[i]) - int(ind))):
+                    Fssg += (p_i[i] - p_bar)**2
+                    Fssi += (p_ij[i][j] - p_i[i])**2
+                    Fssw += (0 - p_ij[i][j])**2
+                    Fsst += (0 - p_bar)**2
+                for alt in range(0, int(ind)):
+                    Fssg += (p_i[i] - p_bar)**2
+                    Fssi += (p_ij[i][j] - p_i[i])**2
+                    Fssw += (1 - p_ij[i][j])**2
+                    Fsst += (1 - p_bar)**2
+                Rssi += (p_ij[i][j] - p_i[i])**2
+                Rssg += (p_i[i] - p_bar)**2
+                Rsst += (p_ij[i][j] - p_bar)**2
+
+        FMS_g = Fssg / df_g
+        FMS_i = Fssi / df_i
+        FMS_w = Fssw / df_w
+
+        RMS_g = Rssg / df_g
+        RMS_i = Rssi / df_i
+
+        fs2_w = FMS_w
+        fs2_i = (FMS_i - fs2_w) / fn0
+        fs2_g = (FMS_g - fs2_w - fn0bis * fs2_i) / fnb0
+
+        rs2_i = RMS_i
+        rs2_g = (RMS_g - rs2_i) / rnb0
+
+        rnum = rs2_g
+        rden = rs2_i + rs2_g
+        fnum = fs2_g
+        fden = fs2_w + fs2_g + fs2_i
+
+        # print(fnum, fden, rnum, rden)
+
+        return rnum, rden, fnum, fden  # why are rnum and fnum so similar??
+
+
 
     def calcRho(locus_list):
         locus = []
@@ -27,6 +148,7 @@ def calcPairwiseBPM(input_file1, input_file2, output, outname, window_size, mini
         ssi = 0.0
         s1 = 0.0
         s2 = 0.0
+        p_i = []
         n_i = []
         ploidy_list = []
         P_i = []
@@ -68,10 +190,6 @@ def calcPairwiseBPM(input_file1, input_file2, output, outname, window_size, mini
             # print(sss,ssi)
         num = (wd * sss) - (ww * ssi)
         den = (wa * ssi)
-        print(locus)
-        print(num, den)
-        print(p_i,p_bar)
-        print(P_i)
 
         return [num, den]
 
@@ -187,8 +305,12 @@ def calcPairwiseBPM(input_file1, input_file2, output, outname, window_size, mini
 
     # play = [['PO1', '2.0', 'scaffold_1', '1234', '10', '20', '500', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1'], ['PO1', '2.0', 'scaffold_1', '1234', '0', '20', '500', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0']]
     # play1 = [['PO1', '4.0', 'scaffold_1', '1234', '10', '20', '500', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2'], ['PO1', '4.0', 'scaffold_1', '1234', '0', '20', '500', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0']]
+    # play2 = [['PO1', '2.0', 'scaffold_1', '1234', '10', '20', '500', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2'], ['PO1', '2.0', 'scaffold_1', '1234', '0', '20', '500', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2']]
+    # play2 = [['PO1', '2.0', 'scaffold_1', '1234', '10', '20', '500', '2', '2', '2', '2', '2', '2', '2', '2', '2', '1'], ['PO1', '2.0', 'scaffold_1', '1234', '0', '20', '500', '0', '0', '0', '0', '0', '0', '0', '0', '0', '1']]
     
-    # ff = calcFst(play1)
+    # a,b,c,d = NestedAnova(play2)
+    # print(a,b,c,d)
+
     for i, line in enumerate(data):
 
         pop, ploidy, scaff, pos, ac, an, dp = line[:7]
@@ -215,15 +337,14 @@ def calcPairwiseBPM(input_file1, input_file2, output, outname, window_size, mini
                     pop2 = pop
                     assert pop1 != pop2
             elif len(Locus) == 2:  # Within current window but have moved on from previous locus
-                new_rho = calcRho(Locus)
-                new_fst = calcFst(Locus)
+                rnum, rden, fnum, fden = NestedAnova(Locus)
                 dxy += calcDxy(Locus)
                 Dxy += dxy
                 snp_count += 1
-                fst = [sum(x) for x in zip(fst, new_fst)]
-                rho = [sum(x) for x in zip(rho, new_rho)]
-                Fst = [sum(x) for x in zip(Fst, new_fst)]
-                Rho = [sum(x) for x in zip(Rho, new_rho)]
+                fst = [sum(x) for x in zip(fst, [fnum, fden])]
+                rho = [sum(x) for x in zip(rho, [rnum, rden])]
+                Fst = [sum(x) for x in zip(Fst, [fnum, fden])]
+                Rho = [sum(x) for x in zip(Rho, [rnum, rden])]
                 # RESET SUMS OF SQUARES
                 Locus = []
                 Locus.append(line)
@@ -238,19 +359,17 @@ def calcPairwiseBPM(input_file1, input_file2, output, outname, window_size, mini
         elif int(pos) > end or scaff != oldscaff:
             if len(Locus) == 2:  # Current snp is onto next window, but must do calculation for previous locus before moving on
                 snp_count += 1
-                new_rho = calcRho(Locus)
-                new_fst = calcFst(Locus)
+                rnum, rden, fnum, fden = NestedAnova(Locus)
                 dxy += calcDxy(Locus)
                 Dxy += dxy
-                fst = [sum(x) for x in zip(fst, new_fst)]
-                rho = [sum(x) for x in zip(rho, new_rho)]
-                Fst = [sum(x) for x in zip(Fst, new_fst)]
-                Rho = [sum(x) for x in zip(Rho, new_rho)]
+                fst = [sum(x) for x in zip(fst, [fnum, fden])]
+                rho = [sum(x) for x in zip(rho, [rnum, rden])]
+                Fst = [sum(x) for x in zip(Fst, [fnum, fden])]
+                Rho = [sum(x) for x in zip(Rho, [rnum, rden])]
 
             if snp_count >= minimum_snps:  # Use or exclude window from
                 Snp_count += snp_count
                 num_wind += 1
-                print(fst, rho)
                 fst = fst[0] / fst[1]
                 fac = rho[0] / rho[1]
                 rho_i = fac / (1 + fac)
@@ -291,14 +410,13 @@ def calcPairwiseBPM(input_file1, input_file2, output, outname, window_size, mini
 
     if len(Locus) == 2:  # Final window calculations
         snp_count += 1
-        new_rho = calcRho(Locus)
-        new_fst = calcFst(Locus)
+        rnum, rden, fnum, fden = NestedAnova(Locus)
         dxy += calcDxy(Locus)
         Dxy += dxy
-        fst = [sum(x) for x in zip(fst, new_fst)]
-        rho = [sum(x) for x in zip(rho, new_rho)]
-        Fst = [sum(x) for x in zip(Fst, new_fst)]
-        Rho = [sum(x) for x in zip(Rho, new_rho)]
+        fst = [sum(x) for x in zip(fst, [fnum, fden])]
+        rho = [sum(x) for x in zip(rho, [rnum, rden])]
+        Fst = [sum(x) for x in zip(Fst, [fnum, fden])]
+        Rho = [sum(x) for x in zip(Rho, [rnum, rden])]
 
     if snp_count >= minimum_snps:  # Use or exclude window from
         num_wind += 1
@@ -306,7 +424,6 @@ def calcPairwiseBPM(input_file1, input_file2, output, outname, window_size, mini
         fac = rho[0] / rho[1]
         rho_i = fac / (1 + fac)
         dxy = dxy / float(snp_count)
-        dxy = dxy / snp_count
 
         out1.write(pop1 + '\t' + pop2 + '\t' + scaff + '\t' +
                    str(start) + '\t' +
