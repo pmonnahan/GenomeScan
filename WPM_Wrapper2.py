@@ -205,6 +205,31 @@ class PopGen:
         else:
             print("Must run splitVCFs prior to running recode")
 
+    def getPloidies(self, recode_dir):
+        print("Be sure that 'recode' scripts have all finished")
+        if recode_dir.endswith("/") is False:
+            recode_dir += "/"
+        ploidies = {}
+        dips = []
+        tets = []
+        if os.path.exists(recode_dir) is True:
+            for pop in self.pops:
+                tmp = open(recode_dir + pop + '.table.recode.txt', 'r')
+                line = tmp.readline()
+                ploidy = line.split("\t")[1]
+                ploidies[pop] = ploidy
+                if ploidy == "4.0":
+                    tets.append(pop)
+                elif ploidy == "2.0":
+                    dips.append(pop)
+                else:
+                    print("Ploidy level not recognized")
+            self.ploidies = ploidies
+            self.dips = dips
+            self.tets = tets
+        else:
+            print("recode_dir does not exist")
+
     # CALCULATE WITHIN POPULATION METRICS
     def calcwpm(self, recode_dir, window_size, min_snps, population="all", print1=False, mem=16000, numcores=1, sampind="-99"):
         if sampind == "-99":
