@@ -5,13 +5,8 @@ import argparse
 
 # export PYTHONPATH="$PYTHONPATH:/Users/monnahap/Documents/Research/code/GenomeScan/"
 
-# Use 'sort <filename> -k3,3 -k4,4n > rho_test3.sort.txt' to sort by scaffold and then position (numerically)
-# Nevermind, integrated file concatenation and sorting into this script
 
-# Substitute missingness for number of individuals to downsample to.  That way you can enter one number for all populations to be downsampled to.
-
-
-def calcPairwiseBPM(input_file1, input_file2, output, outname, window_size, minimum_snps):
+def calcPairwiseBPM(input_file, output, outname, window_size, minimum_snps):
 
     def NestedAnova(locus_list):
         locus = []
@@ -146,28 +141,24 @@ def calcPairwiseBPM(input_file1, input_file2, output, outname, window_size, mini
 
         return dxy
 
+    # Prepare output file
+    outfile = output + outname + '_BPM.txt'
+    out1 = open(outfile, 'w')
+    out1.write("pop1\tpop2\tscaff\tstart\tend\twin_size\tnum_snps\tRho\tFst\tdxy\n")
 
-    # Concatenate input files and sort them
-    print("Concatenating input files and sorting by scaffold and position")
-    in1 = open(input_file1, 'r').readlines()
-    in2 = open(input_file2, 'r').readlines()
-    in1 = [j.strip("\n").strip("\t").split("\t") for j in in1]
-    in2 = [j.strip("\n").strip("\t").split("\t") for j in in2]
-    data = in1 + in2
+    # Sort intput data
+    data = open(input_file, 'r')
+    data = [j.strip("\n").strip("\t").split("\t") for j in data]
+    print("Sorting concatenated input files")
     data = sorted(data, key=lambda k: (int(k[2].split("_")[1]), int(k[3])))  # Sorts by scaffold then position
-    print("Finished preparing input data")
-
-
+    
+    # Begin loop over data file
     snp_count = 0
     Snp_count = 0
     start = 0.0
     end = window_size
     winexclcount = 0
     num_wind = 0
-    outfile = output + outname + '_BPM.txt'
-    out1 = open(outfile, 'w')
-    out1.write("pop1\tpop2\tscaff\tstart\tend\twin_size\tnum_snps\tRho\tFst\tdxy\n")
-
     for i, line in enumerate(data):
 
         pop, ploidy, scaff, pos, ac, an, dp = line[:7]
@@ -231,7 +222,7 @@ def calcPairwiseBPM(input_file1, input_file2, output, outname, window_size, mini
                 rho_i = fac / (1 + fac)
                 dxy = dxy / float(snp_count)
 
-                out1.write(pop1 + '\t' + pop2 + '\t' + scaff + '\t' +  # Write calculations to file
+                out1.write(outname + '\t' + scaff + '\t' +  # Write calculations to file
                            str(start) + '\t' +
                            str(end) + '\t' +
                            str(window_size) + '\t' +
@@ -281,7 +272,7 @@ def calcPairwiseBPM(input_file1, input_file2, output, outname, window_size, mini
         rho_i = fac / (1 + fac)
         dxy = dxy / float(snp_count)
 
-        out1.write(pop1 + '\t' + pop2 + '\t' + scaff + '\t' +
+        out1.write(outname + '\t' + scaff + '\t' +
                    str(start) + '\t' +
                    str(end) + '\t' +
                    str(window_size) + '\t' +
@@ -297,7 +288,7 @@ def calcPairwiseBPM(input_file1, input_file2, output, outname, window_size, mini
     rho_G = FAC / (1 + FAC)
     Fst_G = Fst[0] / Fst[1]
     Dxy = Dxy / Snp_count
-    out1.write(pop1 + '\t' + pop2 + '\t' + "Genome" + '\t' +
+    out1.write(outname + '\t' + "Genome" + '\t' +
                "-99" + '\t' +
                "-99" + '\t' +
                str(window_size) + '\t' +
@@ -315,12 +306,11 @@ if __name__ == '__main__':  # Used to run code from command line
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-i1', type=str, metavar='input_file1', required=True, help='input file created with recode012.py')
-    parser.add_argument('-i2', type=str, metavar='input_file2', required=True, help='input file created with recode012.py')
     parser.add_argument('-o', type=str, metavar='output_directory', required=True, help='Output Directory')
-    parser.add_argument('-prefix', type=str, metavar='output_file_prefix', required=True, help='Prefix of output file...suggest Pop1vPop2')
+    parser.add_argument('-prefix', type=str, metavar='output_file_prefix', required=True, help='Name indicating populations in input file')
     parser.add_argument('-ws', type=float, metavar='window_size', required=False, default='10000.0', help='Size of windows in bp')
     parser.add_argument('-ms', type=int, metavar='minimum_snps', required=False, default='2', help='minimum number of snps in a window')
 
     args = parser.parse_args()
 
-    j1, j2, j3 = calcPairwiseBPM(args.i1, args.i2, args.o, args.prefix, args.ws, args.ms)
+    j1, j2, j3 = calcPairwiseBPM(args.i, args.o, args.prefix, args.ws, args.ms)
