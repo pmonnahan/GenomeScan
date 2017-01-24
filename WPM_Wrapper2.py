@@ -5,6 +5,8 @@ import subprocess
 import argparse
 import pandas
 import math
+import statistics
+import numpy as np
 
 # Directions:
 # import WPM_Wrapper2 into python console
@@ -206,6 +208,7 @@ class PopGen:
             print("Must run splitVCFs prior to running recode")
 
     def getPloidies(self, recode_dir):
+
         print("Be sure that 'recode' scripts have all finished")
         if recode_dir.endswith("/") is False:
             recode_dir += "/"
@@ -214,16 +217,19 @@ class PopGen:
         tets = []
         if os.path.exists(recode_dir) is True:
             for pop in self.pops:
-                tmp = open(recode_dir + pop + '.table.recode.txt', 'r')
-                line = tmp.readline()
-                ploidy = line.split("\t")[1]
-                ploidies[pop] = ploidy
-                if ploidy == "4.0":
-                    tets.append(pop)
-                elif ploidy == "2.0":
-                    dips.append(pop)
-                else:
-                    print("Ploidy level not recognized")
+                try:
+                    tmp = open(recode_dir + pop + '.table.recode.txt', 'r')
+                    line = tmp.readline()
+                    ploidy = line.split("\t")[1]
+                    ploidies[pop] = ploidy
+                    if ploidy == "4.0":
+                        tets.append(pop)
+                    elif ploidy == "2.0":
+                        dips.append(pop)
+                    else:
+                        print("Ploidy level not recognized")
+                except (FileNotFoundError, IndexError):
+                    print("Error determining ploidy for population: ", pop)
             self.ploidies = ploidies
             self.dips = dips
             self.tets = tets
@@ -326,3 +332,82 @@ class PopGen:
 
         else:
             print("Did not find recode_dir.  Must run splitVCFs followed by recode before able to calculate between population metrics")
+
+
+    def findOutliers(self, recode_dir, in_file, column_index_list, percentile, metrics, tails='upper'):
+
+        if recode_dir.endswith("/") is False:
+            recode_dir += "/"
+
+        if os.path.exists(recode_dir) is True:
+
+            data = pandas.read_table(recode_dir + in_file, header=0)
+            metrics = []
+            for i in column_index_list:
+                metrics.append(list(data.columns.values)[i])
+            data.sort(metrics, ascending=[1 for x in range(0, len(metrics))])
+
+            for metric in metrics:
+                data[metric + '.out'] = 0
+                data = data.sort([metric], ascending=[0])
+                if tails == 'both':
+                    data[metric + '.out'].loc[(data[metric] > data.quantile(q=percentile, axis=1))] = 1
+                    data[metric + '.out'].loc[(data[metric] < data.quantile(q=1.0 - percentile, axis=1))] = 1
+                elif tails == 'lower':
+                    data[metric + '.out'].loc[(data[metric] < data.quantile(q=1.0 - percentile, axis=1))] = 1
+                elif tails == 'upper':
+                    data[metric + '.out'].loc[(data[metric] > data.quantile(q=percentile, axis=1))] = 1
+                else:
+                    print("Did not specify tails option correctly.  Options are: both, upper, and lower")
+            data['num_outliers'] = data.iloc[:, -len(metrics):].sum(1)
+            data.to_csv(recode_dir + in_file.replace(".txt", "") + '_' + str(percentile) + 'tile_OutLabelled.csv', index=False)
+            # select all windows that are outliers for at least one metric
+            df_outlier = data[(data.num_outliers != 0)]
+            df_outlier.to_csv(recode_dir + in_file.replace(".txt", "") + '_' + str(percentile) + 'tile_OutOnly.csv', index=False)
+            df_outlier.to_csv(recode_dir + in_file.replace(".txt", "") + '_' + str(percentile) + 'tile_OutOnly.bed', index=False, sep='\t', columns=["scaffold", "start", "end"], header=False)
+
+
+    def annotateOutliers(self, recode_dir, in_file, basename, annotation_file, overlap_proportion=0.000001):
+
+        if recode_dir.endswith("/") is False:
+            recode_dir += "/"
+
+        if os.path.exists(recode_dir) is True:
+            shfile1 = open(recode_dir + 'bedtools_gff.sh', 'w')
+            shfile1.write('#!/bin/bash\n' +
+                          '#SBATCH -J GS.bedtools.sh' + '\n' +
+                          '#SBATCH -e GS.bedtools.err\n' +
+                          '#SBATCH -o GS.bedtools.out\n' +
+                          '#SBATCH -p nbi-short\n' +
+                          '#SBATCH -n 1\n' +
+                          '#SBATCH -t 0-12:00\n' +
+                          '#SBATCH --mem=16000\n' +
+                          'source bedtools-2.17.0\n' +
+                          'bedtools intersect -a ' + recode_dir + in_file + ' -b ' + annotation_file + ' -f ' + str(overlap_proportion) + ' -wb | ' +
+                          """awk '{$1=$2=$3=""; print $4,$5,$6,$7,$8,$9,$10,$11,$12}'""" +
+                          '| grep transcript | grep -v transcription | sort -u | ' +
+                          """tr ' ' '\t' """
+                          '> ' + recode_dir + basename + '_' + str(overlap_proportion * 100) + 'ol_genes.gff')
+            shfile1.close()
+
+            cmd1 = ('sbatch ' + recode_dir + 'bedtools_gff.sh')
+            p1 = subprocess.Popen(cmd1, shell=True)
+            sts1 = os.waitpid(p1.pid, 0)[1]
+
+        else:
+            print("recode_dir not found")
+
+
+    def mergeAnnotation(self, recode_dir, outlier_file, annotated_outlier_file):
+        if recode_dir.endswith("/") is False:
+            recode_dir += "/"
+
+        if os.path.exists(recode_dir) is True:
+            try:
+                outliers = pandas.read_table(recode_dir + outlier_file, header=0)
+                annotation = pandas.read_table(recode_dir + annotated_outlier_file, names=["scaffold", "start", "end", "info1", "info2", "info3", "info4", "info5", "info6", "info7", "info8", "info9"])
+            except IOError:
+                print("Did not find either original outlier file or the annotated outlier file")
+            merged = pandas.merge(outliers, annotation, ["scaffold", "start", "end"],)
+            merged.to_csv(recode_dir + outlier_file.replace(".txt", "") + '_OutAnnot.csv', index=False)
+

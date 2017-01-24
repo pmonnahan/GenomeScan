@@ -5,7 +5,7 @@ import argparse
 
 # export PYTHONPATH="$PYTHONPATH:/Users/monnahap/Documents/Research/code/GenomeScan/"
 
-
+#Add within population varP...could just use average SSI
 def calcPairwiseBPM(input_file, output, outname, window_size, minimum_snps):
 
     def NestedAnova(locus_list):
@@ -144,14 +144,14 @@ def calcPairwiseBPM(input_file, output, outname, window_size, minimum_snps):
     # Prepare output file
     outfile = output + outname + '_BPM.txt'
     out1 = open(outfile, 'w')
-    out1.write("pop1\tpop2\tscaff\tstart\tend\twin_size\tnum_snps\tRho\tFst\tdxy\n")
+    out1.write("contrast\tscaff\tstart\tend\twin_size\tnum_snps\tRho\tFst\tdxy\n")
 
     # Sort intput data
     data = open(input_file, 'r')
     data = [j.strip("\n").strip("\t").split("\t") for j in data]
     print("Sorting concatenated input files")
     data = sorted(data, key=lambda k: (int(k[2].split("_")[1]), int(k[3])))  # Sorts by scaffold then position
-    
+
     # Begin loop over data file
     snp_count = 0
     Snp_count = 0
