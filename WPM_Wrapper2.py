@@ -68,7 +68,9 @@ class PopGen:
             print("Population does not exist")
 
 
-    def splitVCFs(self, vcf_dir, ref_path, mem=16000, numcores=1, print1=False, overwrite=False):
+    def splitVCFs(self, vcf_dir, ref_path, min_dp, mem=16000, numcores=1, print1=False, overwrite=False):
+
+        # ADD FUNCTIONALITY TO FILTER GENOTYPES BASED ON READ DEPTH
         if vcf_dir.endswith("/") is False:
             vcf_dir += "/"
         outdir = self.split_dir
@@ -410,4 +412,68 @@ class PopGen:
                 print("Did not find either original outlier file or the annotated outlier file")
             merged = pandas.merge(outliers, annotation, ["scaffold", "start", "end"],)
             merged.to_csv(recode_dir + outlier_file.replace(".txt", "") + '_OutAnnot.csv', index=False)
+        else:
+            print("Did not find recode_dir")
 
+    def repolarize(self, recode_dir, in_file, repolarization_key):
+        if recode_dir.endswith("/") is False:
+            recode_dir += "/"
+
+        key = open(repolarization_key, 'r')
+        key_list = []
+        for i, line in enumerate(key):
+            line = line.strip("\n").split("\t")
+            scaff = line[0]
+            pos = line[1]
+            if i == 0:
+                old_scaff = scaff
+                Scaff = [pos]
+            elif scaff == old_scaff:
+                Scaff.append(pos)
+            else:
+                key_list.append(Scaff)
+                Scaff = [pos]
+                old_scaff = scaff
+
+        new = open(recode_dir + in_file.replace(".txt", ".repol.txt"), 'w')
+        if os.path.exists(recode_dir + in_file) is True:
+            with open(recode_dir + in_file) as inf:
+                for j, line in enumerate(inf):
+                    line = line.strip("\n").strip("\t").split("\t")
+                    pop, ploidy, scaff, pos, ac, an, dp = line[:7]
+                    pos = pos
+                    scaff = int(scaff.split("_")[1])
+                    newline = pop + "\t" + ploidy + "\t" + scaff + "\t" + pos + "\t" + ac + "\t" + an + "\t" + dp + "\t"
+                    if pos in key_list[scaff]:
+                        for geno in line[7:]:
+                            newline += str(int(ploidy) - int(geno)) + "\t"
+                        newline.strip("\t")
+                        new.write(newline)
+                    else:
+                        new.write(line)
+
+    def generateFSC2input(self, recode_dir, pops, output_name):
+
+        if recode_dir.endswith("/") is False:
+            recode_dir += "/"
+
+        num_pops = len(pops)
+        # num_inds = [self.samp_nums.get(x) for x in pops]
+        if os.path.exists(recode_dir) is True:
+            print("Concatenating input files")
+            concat_file = open(recode_dir + output_name + '.repol.concat.txt', 'w')
+            for file in os.listdir(recode_dir):
+                if file.endswith(".repol.txt") and file.split(".")[0] in pops:
+                    pops.pop(file.split(".")[0])
+                    with open(recode_dir + file) as infile:
+                        for line in infile:
+                            concat_file.write(line)
+            if len(pops) != 0:
+                print("Did not find repolarized files for the following populations ", pops)
+            print("Finished preparing input data")
+
+            # INSERT BATCH SCRIPT HERE!!
+            # USE OUTPUT_NAME AS OUTNAME FOR FSC2INPUT CODE
+
+        else:
+            print("!!!Did not find recode_dir!!!!")

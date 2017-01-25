@@ -55,9 +55,6 @@ def calcwpm(input_file, output, sampind=5, window_size=50000, minimum_snps=2):
                 e1 = c1 / aw
                 e2 = c2 / (aw**2 + a2)
 
-  #               my $e1 = (1/$a1)*(($n+1)/(3*($n-1)) - (1/$a1)) ;
-  # my $e2 = (1/($a1**2 + $a2))*((2*(($n**2) + $n + 3))/(9*$n*($n-1)) - ($n+2)/($n*$a1) + ($a2)/($a1**2)) ;
-
             if int(pos) > start and int(pos) <= end and int(an) >= AN and scaff == oldscaff:
                 snp_count += 1
                 Snp_count += 1
