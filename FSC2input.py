@@ -12,7 +12,7 @@ import itertools
 # Add within population varP...could just use average SSI
 
 
-def FSC2input(input_file, output, outname, numpops, window_size, minimum_snps, num_bootstraps):
+def generateFSC2input(input_file, output, outname, numpops, window_size, minimum_snps, num_bootstraps):
 
     scaff_lengths = [33684748, 19642879, 24872290, 23717143, 21575646, 25532148, 25060017, 23333815]
     num_winds = sum([float(x) / float(window_size) for x in scaff_lengths])
@@ -20,8 +20,10 @@ def FSC2input(input_file, output, outname, numpops, window_size, minimum_snps, n
     wind_counts = []
     for j in range(0, num_bootstraps):
         wind_counts.append([0 for x in range(0, int(num_winds))])
+        print(len(wind_counts[j]))
         for x in range(0, int(num_winds)):
-            wind_counts[j][randint(0, int(num_winds))] += 1
+            print(j, len(wind_counts[j]), randint(0, int(num_winds)), x)
+            wind_counts[j][randint(0, int(num_winds) - 1)] += 1
 
     # Prepare output file
     outfile = output + outname + '_DSFS.obs'
@@ -67,9 +69,9 @@ def FSC2input(input_file, output, outname, numpops, window_size, minimum_snps, n
             string += "\n"
             get_pops = False
             for rep in range(0, num_bootstraps):
-                exec "out%d = open('%s%s.rep%d_DSFS.obs', 'w')" % (rep + 1, output, outname, rep + 1)
-                exec "DSFS%d = np.zeros(shape=(%s), dtype=np.int)" % (rep, string1)
-                exec "out%d.write(%s)" % (rep + 1, string)
+                exec("out%d = open('%s%s.rep%d_DSFS.obs', 'w')" % (rep + 1, output, outname, rep + 1))
+                exec("DSFS%d = np.zeros(shape=(%s), dtype=np.int)" % (rep, string1))
+                exec("out%d.write(%s)" % (rep + 1, string))
 
         if pos == old_pos:  # Accruing information from multiple populations but same locus
             Locus.append(line)
@@ -87,7 +89,7 @@ def FSC2input(input_file, output, outname, numpops, window_size, minimum_snps, n
                 for aa in ac_i:
                     index += '[' + aa + ']'
                 for samp_num in range(0, rep[wind_num]):
-                    exec "DSFS%d%s += 1" % (rep, index)
+                    exec("DSFS%d%s += 1" % (rep, index))
             ac_i = []
             Locus = []
             Locus.append(line)
@@ -108,8 +110,8 @@ def FSC2input(input_file, output, outname, numpops, window_size, minimum_snps, n
         for st in range(0, len(state)):
             dstring += "[" + state[st] + "]"
         for rep in range(0, num_bootstraps):
-            exec "entry = DSFS%d%s" % (rep, dstring)
-            exec "out%d.write(%s)" % (rep, str(entry) + "\t")
+            exec("entry = DSFS%d%s" % (rep, dstring))
+            exec("out%d.write(%s)" % (rep, str(entry) + "\t"))
 
 
     return num_wind, winexclcount
@@ -127,4 +129,4 @@ if __name__ == '__main__':  # Used to run code from command line
 
     args = parser.parse_args()
 
-    j1, j2, j3 = FSC2input(args.i, args.o, args.prefix, args.ws, args.ms)
+    j1, j2, j3 = generateFSC2input(args.i, args.o, args.prefix, args.ws, args.ms)
