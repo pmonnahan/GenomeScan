@@ -57,7 +57,7 @@ with open(args.i, "rU") as table:
                 print(i)
             GT.strip("\t")
             GT += "\n"
-            if alt is True and float(numobs) / float(numind) >= args.mf and dp >= args.dp * len(line[5:]):
+            if float(numobs) / float(numind) >= args.mf and dp >= args.dp * len(line[5:]):
                 numsites += 1
                 GTfile.write(GT)
 

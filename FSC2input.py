@@ -6,6 +6,8 @@ from random import randint
 import numpy as np
 import math
 import itertools
+from operator import mul
+from functools import reduce
 
 # export PYTHONPATH="$PYTHONPATH:/Users/monnahap/Documents/Research/code/GenomeScan/"
 
@@ -14,9 +16,11 @@ import itertools
 
 def generateFSC2input(input_file, output, outname, numpops, window_size, minimum_snps, num_bootstraps):
 
+
+
     scaff_lengths = [33684748, 19642879, 24872290, 23717143, 21575646, 25532148, 25060017, 23333815]
     num_winds = sum([float(x) / float(window_size) for x in scaff_lengths])
-    per_scaff = [float(x) / float(window_size) for x in scaff_lengths]
+    per_scaff = [int(math.ceil(float(x) / float(window_size))) for x in scaff_lengths]
     wind_counts = []
     for j in range(0, num_bootstraps):
         wind_counts.append([0 for x in range(0, int(num_winds))])
@@ -68,13 +72,19 @@ def generateFSC2input(input_file, output, outname, numpops, window_size, minimum
             string1.strip(",")
             string.strip("\t")
             get_pops = False
+            DSFS = {}
+            states_i = []
+            for i, pop in enumerate(num_alleles):
+                states_i.append([jj for jj in range(0, pop + 1)])
+            states = list(itertools.product(*states_i))
+            num_states = len(states)
             for rep in range(0, num_bootstraps):
-                exec("out%d = open('%s%s.rep%d_DSFS.obs', 'w')" % (rep + 1, output, outname, rep + 1))
-                exec("out%d.write('1 observations.  No. of demes and sample sizes are on next line')" % (rep + 1))
-                exec('out%d.write("""\n""")' % (rep + 1))
-                exec("DSFS%d = np.zeros(shape=(%s), dtype=np.int)" % (rep, string1))
-                exec("out%d.write('%s')" % (rep + 1, string))
-                exec('out%d.write("""\n""")' % (rep + 1))
+                exec("out%d = open('%s%s.rep%d_DSFS.obs', 'w')" % (rep + 1, output, outname, rep + 1), globals())
+                exec("out%d.write('1 observations.  No. of demes and sample sizes are on next line')" % (rep + 1), globals())
+                exec('out%d.write("""\n""")' % (rep + 1), globals())
+                DSFS[str(rep)] = [0 for z in range(0, num_states + 1)]
+                exec("out%d.write('%s')" % (rep + 1, string), globals())
+                exec('out%d.write("""\n""")' % (rep + 1), globals())
 
         if pos == old_pos:  # Accruing information from multiple populations but same locus
             Locus.append(line)
@@ -82,22 +92,18 @@ def generateFSC2input(input_file, output, outname, numpops, window_size, minimum
                 line.remove("-9")
             except ValueError:
                 ac_i.append(int(ac))
-        elif len(Locus) == numpops:  # Skip locus calc if data not present from all populations
-            print(Locus)
-            print(ac_i)
+        elif len(ac_i) == numpops:  # Skip locus calc if data not present from all populations
             snp_count += 1
             scaff_num = int(Locus[0][2].split("_")[1])
             cur_pos = float(Locus[0][3])
             wind_num = sum(per_scaff[:scaff_num - 1]) + int(math.ceil(cur_pos / float(window_size))) - 1
-            
-            for j, rep in enumerate(wind_counts):
-                index = ""
-                print(ac_i)  
-                for aa in ac_i:
-                    index += '[' + str(aa) + ']'
+            # print(wind_num, sum(per_scaff[:scaff_num - 1]), int(math.ceil(cur_pos / float(window_size))))
+            list_pos = 0
+            for jj, aa in enumerate(ac_i):
+                    list_pos += aa * reduce(mul, [len(x) for x in states_i[jj + 1:]], 1)
+            for j, rep in enumerate(wind_counts): 
                 for samp_num in range(0, rep[wind_num]):  # write site according to random number of times the window in which this site resides was chosen
-                    exec("DSFS%d%s +=  1" % (j, index))
-                    print("DSFS%d%s +=  1" % (j, index))
+                    DSFS[str(j)][list_pos] += 1
             ac_i = []
             ac_i.append(int(ac))
             Locus = []
@@ -112,17 +118,13 @@ def generateFSC2input(input_file, output, outname, numpops, window_size, minimum
             Locus.append(line)
             old_pos = pos
 
-    ff = []
-    for i, pop in enumerate(num_alleles):
-        ff.append([jj for jj in range(0, pop + 1)])
-    states = list(itertools.product(*ff))
-    for state in states:
-        dstring = ""
-        for st in range(0, len(state)):
-            dstring += "[" + str(state[st]) + "]"
+    for state in range(num_states):
         for rep in range(0, num_bootstraps):
-            exec("entry = DSFS%d%s" % (rep, dstring))
-            exec("out%d.write(%s)" % (rep, str(entry) + "\t"))
+            entry = DSFS[str(rep)][state]
+            entry = str(entry) + "\t"
+            exec("out%d.write('%s')" % (rep + 1, entry))
+    for rep in range(0, num_bootstraps):
+        exec("out%d.close()" % (rep + 1))
 
 
     return num_wind, winexclcount
