@@ -57,6 +57,8 @@ class scantools:
 
 
     def removePop(self, popname):
+        '''Call: removePop(self, popname)
+           Purpose: remove population from all object and recalculate min_ind'''
         popname = str(popname)
         if popname in self.pops:
             self.pops.remove(popname)
@@ -70,6 +72,10 @@ class scantools:
 
 
     def splitVCFs(self, vcf_dir, ref_path, min_dp, mem=16000, numcores=1, print1=False, overwrite=False):
+        '''Call: splitVCFs(self, vcf_dir, ref_path, min_dp, mem=16000, numcores=1, print1=False, overwrite=False)
+           Purpose:  Find all vcfs in vcf_dir and split them by population according to samples associated with said population.said
+                    Then, take only biallelic snps and convert vcf to table containing scaff, pos, ac, an, dp, and genotype fields.vcf
+                    Finally, concatenate all per-scaffold tables to one giant table. Resulting files will be put into ~/Working_Dir/VCFs/'''
 
         # ADD FUNCTIONALITY TO FILTER GENOTYPES BASED ON READ DEPTH
         if vcf_dir.endswith("/") is False:
@@ -164,6 +170,10 @@ class scantools:
 
 
     def recode(self, min_avg_dp, missingness, print1=False, mem=16000, numcores=1):
+        '''Call: recode(self, min_avg_dp, missingness, print1=False, mem=16000, numcores=1)
+           Purpose: Take the concatenated table files in ~/Working_Dir/VCFs/ and recode them so that genotypes are represented as number of alternative alleles
+           Notes: Also, adds population name and ploidy as columns in file.  Files are output to a folder named ~/Working_Dir/Recoded.DPXX.MX.X/ where the Xs are user specified
+                    These directories will be primary depositories for all subsequent commands.'''
 
         sampind = int(math.ceil(self.min_ind * (1.0 - missingness)))
         if sampind == self.min_ind and missingness != 0.0:
@@ -215,6 +225,9 @@ class scantools:
             print("Must run splitVCFs prior to running recode")
 
     def getPloidies(self, recode_dir):
+        '''Call: getPloidies(self, recode_dir)
+           Purpose: Create new methods of scantools object containing ploidy of each population (.ploidies) as well as a list of dips (.dips) and tetraploid populations (.tets)
+           Notes: Can only be executed after recode has been executed on vcfs'''
 
         print("Be sure that 'recode' scripts have all finished")
         if recode_dir.endswith("/") is False:
@@ -245,6 +258,11 @@ class scantools:
 
     # CALCULATE WITHIN POPULATION METRICS
     def calcwpm(self, recode_dir, window_size, min_snps, population="all", print1=False, mem=16000, numcores=1, sampind="-99"):
+        '''Call: calcwpm(self, recode_dir, window_size, min_snps, population="all", print1=False, mem=16000, numcores=1, sampind="-99")
+           Purpose: Calculate within population metrics including: allele frequency, expected heterozygosity, Wattersons theta, Pi, ThetaH, ThetaL and neutrality tests: D, normalized H, E
+           Notes:  Currently, all populations are downsampled to same number of individuals.  By default, this minimum individuals across populations minus 1 to allow for some missing data
+                    It is worth considering whether downsampling should be based on number of individuals or number of alleles.
+                    Results are held ~/Working_Dir/Recoded/ in series of files ending in _WPM.txt.  These can be concatenated using concatWPM'''
         if sampind == "-99":
             sind = self.min_ind - 1
         else:
@@ -287,7 +305,35 @@ class scantools:
         else:
             print("Did not find recode_dir.  Must run splitVCFs followed by recode before able to calculate within population metrics")
 
+    def concatWPM(self, recode_dir, pops='all'):
+        '''Call: concatWPM(self, recode_dir, pops='all')
+           Purpose:  Concatenate _WPM.txt files corresponding to populations indicated in pops parameter.'''
+
+        if recode_dir.endswith("/") is False:
+            recode_dir += "/"
+
+        if os.path.exists(recode_dir) is True:
+            new = open(recode_dir + "All_WPM.txt", 'w')
+            if pops == 'all':
+                pops = self.pops
+            for i, pop in enumerate(pops):
+                try:
+                    with open(recode_dir + pop + "_WPM.txt", 'r') as inf:
+                        for j, line in enumerate(inf):
+                            if j == 0 and i == 0:
+                                new.write(line)
+                            else:
+                                new.write(line)
+                except FileNotFoundError:
+                    print("Did not find _WPM.txt file for population: ", pop)
+
+
     def calcbpm(self, recode_dir, pops, output_name, window_size, minimum_snps, print1=False, mem=16000, numcores=1):
+        '''Call: calcbpm(self, recode_dir, pops, output_name, window_size, minimum_snps, print1=False, mem=16000, numcores=1)
+           Purpose:  Calculate between population metrics including: Dxy, Fst (using Weir and Cockerham 1984), and Rho (Ronfort et al. 1998)
+           Notes: User provides a list of populations to be included.  For pairwise estimates, simply provide two populations
+                    Calculations are done for windows of a given bp size.  User also must specify the minimum number of snps in a window
+                    for calculations to be made'''
 
         if recode_dir.endswith("/") is False:
             recode_dir += "/"
@@ -337,9 +383,17 @@ class scantools:
 
 
     def findOutliers(self, recode_dir, in_file, column_index_list, percentile, metrics, tails='upper'):
+        '''Call: findOutliers(self, recode_dir, in_file, column_index_list, percentile, metrics, tails='upper')
+           Purpose:  Take output from either calcwpm or calcbpm and determine outlier metrics for a given percentile.
+           Notes: Output will be two csv files (one containing all sites with outliers indicated by 0 or 1 and another containing just outliers)
+                  as well as a bed file to be used in annotateOutliers'''
 
         if recode_dir.endswith("/") is False:
             recode_dir += "/"
+
+        if percentile > 1.0:
+            print("!!percentile parameter should be coded as a proportion, not as a percentage!!")
+            return False
 
         if os.path.exists(recode_dir) is True:
 
@@ -370,6 +424,10 @@ class scantools:
 
 
     def annotateOutliers(self, recode_dir, in_file, basename, annotation_file, overlap_proportion=0.000001):
+        '''Call: annotateOutliers(self, recode_dir, in_file, basename, annotation_file, overlap_proportion=0.000001)
+           Purpose: annotate bed file from findOutliers using information in annotation_file
+           Notes: The output (suffix ol_genes.gff) only contains the window locations along with annotation info and does not contain
+                    the original metric information used to determine outliers.  Use mergeAnnotation to merge original outlier file with annotation info'''
 
         if recode_dir.endswith("/") is False:
             recode_dir += "/"
@@ -396,11 +454,16 @@ class scantools:
             p1 = subprocess.Popen(cmd1, shell=True)
             sts1 = os.waitpid(p1.pid, 0)[1]
 
+            os.remove(recode_dir + 'bedtools_gff.sh')
+
         else:
             print("recode_dir not found")
 
 
     def mergeAnnotation(self, recode_dir, outlier_file, annotated_outlier_file):
+        '''Call: mergeAnnotation(self, recode_dir, outlier_file, annotated_outlier_file)
+           Purpose: Merge the annotation information with the original outlier file results from findOutliers.'''
+
         if recode_dir.endswith("/") is False:
             recode_dir += "/"
 
@@ -416,6 +479,9 @@ class scantools:
             print("Did not find recode_dir")
 
     def repolarize(self, recode_dir, in_file, repolarization_key):
+        '''Call: repolarize(self, recode_dir, in_file, repolarization_key)
+           Purpose: repolarize the .recode.txt files in recode_dir according to a key generated by repolarization_lookupKey.py
+           Notes: This is necessary for generateFSC2input as this method looks for files named .repol.txt'''
         if recode_dir.endswith("/") is False:
             recode_dir += "/"
 
@@ -452,12 +518,15 @@ class scantools:
                     else:
                         new.write(line)
 
-    def generateFSC2input(self, recode_dir, pops, output_name):
+    def generateFSC2input(self, recode_dir, pops, output_name, bootstrap_block_size, bootstrap_reps, mem=16000, numcores=1, time='2-00:00'):
+        '''Call: generateFSC2input(self, recode_dir, pops, output_name, bootstrap_block_size, bootstrap_reps, mem=16000, numcores=1, time='2-00:00')
+           Purpose:  Generate --multiSFS for fastsimcoal2 along with a given number of non-parametric block-bootstrapped replicates
+           Notes: Must provide the block size for bootstrapping as well as number of bootstrap replicates
+                  As of now, the necessary template files for FSC2 must come from elsewhere.  Beware of running this method with numerous populations'''
 
         if recode_dir.endswith("/") is False:
             recode_dir += "/"
 
-        num_pops = len(pops)
         # num_inds = [self.samp_nums.get(x) for x in pops]
         if os.path.exists(recode_dir) is True:
             print("Concatenating input files")
@@ -472,8 +541,26 @@ class scantools:
                 print("Did not find repolarized files for the following populations ", pops)
             print("Finished preparing input data")
 
-            # INSERT BATCH SCRIPT HERE!!
-            # USE OUTPUT_NAME AS OUTNAME FOR FSC2INPUT CODE
+            shfile4 = open(output_name + '.fsc2input.sh', 'w')
+
+            shfile4.write('#!/bin/bash\n' +
+                          '#SBATCH -J ' + output_name + '.fsc2input.sh' + '\n' +
+                          '#SBATCH -e ' + self.oande + output_name + '.fsc2input.err' + '\n' +
+                          '#SBATCH -o ' + self.oande + output_name + '.fsc2input.out' + '\n' +
+                          '#SBATCH -p nbi-medium\n' +
+                          '#SBATCH -n ' + str(numcores) + '\n' +
+                          '#SBATCH -t ' + str(time) + '\n' +
+                          '#SBATCH --mem=' + str(mem) + '\n' +
+                          'source python-3.5.1\n' +
+                          'source env/bin/activate\n' +
+                          'python3 /usr/users/JIC_c1/monnahap/GenomeScan/FSC2input.py -i ' + recode_dir + output_name + '.repol.concat.txt -o ' + recode_dir + ' -prefix ' + output_name + ' -ws ' + str(bootstrap_block_size) + ' -bs ' + str(bootstrap_reps) + '\n')
+            shfile4.close()
+
+            cmd1 = ('sbatch ' + output_name + '.fsc2input.sh')
+            p1 = subprocess.Popen(cmd1, shell=True)
+            sts1 = os.waitpid(p1.pid, 0)[1]
+
+            os.remove(output_name + '.fsc2input.sh')
 
         else:
             print("!!!Did not find recode_dir!!!!")
