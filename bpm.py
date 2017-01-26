@@ -5,10 +5,8 @@ import argparse
 
 # export PYTHONPATH="$PYTHONPATH:/Users/monnahap/Documents/Research/code/GenomeScan/"
 
-# Add within population varP...could just use average SSI
-
-
-def calcBPM(input_file, output, outname, window_size, minimum_snps):
+#Add within population varP...could just use average SSI
+def calcPairwiseBPM(input_file, output, outname, window_size, minimum_snps):
 
     def NestedAnova(locus_list):
         locus = []
@@ -146,11 +144,12 @@ def calcBPM(input_file, output, outname, window_size, minimum_snps):
     # Prepare output file
     outfile = output + outname + '_BPM.txt'
     out1 = open(outfile, 'w')
-    out1.write("pop1\tpop2\tscaff\tstart\tend\twin_size\tnum_snps\tRho\tFst\tdxy\n")
+    out1.write("contrast\tscaff\tstart\tend\twin_size\tnum_snps\tRho\tFst\tdxy\n")
 
     # Sort intput data
     data = open(input_file, 'r')
     data = [j.strip("\n").strip("\t").split("\t") for j in data]
+    print("Sorting concatenated input files")
     data = sorted(data, key=lambda k: (int(k[2].split("_")[1]), int(k[3])))  # Sorts by scaffold then position
 
     # Begin loop over data file
@@ -196,7 +195,7 @@ def calcBPM(input_file, output, outname, window_size, minimum_snps):
                 Rho = [sum(x) for x in zip(Rho, [rnum, rden])]
                 Locus = []  # Clear site information
                 Locus.append(line)  # Append current site to site info
-                old_pos = pos
+                old_pos = pos  
 
             else:  # Previous site contained data from only one population, so skip calculations
                 Locus = []
@@ -306,7 +305,7 @@ def calcBPM(input_file, output, outname, window_size, minimum_snps):
 if __name__ == '__main__':  # Used to run code from command line
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('-i', type=str, metavar='input_file', required=True, help='input file created with recode012.py')
+    parser.add_argument('-i1', type=str, metavar='input_file1', required=True, help='input file created with recode012.py')
     parser.add_argument('-o', type=str, metavar='output_directory', required=True, help='Output Directory')
     parser.add_argument('-prefix', type=str, metavar='output_file_prefix', required=True, help='Name indicating populations in input file')
     parser.add_argument('-ws', type=float, metavar='window_size', required=False, default='10000.0', help='Size of windows in bp')
@@ -314,4 +313,4 @@ if __name__ == '__main__':  # Used to run code from command line
 
     args = parser.parse_args()
 
-    j1, j2, j3 = calcBPM(args.i, args.o, args.prefix, args.ws, args.ms)
+    j1, j2, j3 = calcPairwiseBPM(args.i, args.o, args.prefix, args.ws, args.ms)
