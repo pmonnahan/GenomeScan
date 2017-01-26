@@ -55,6 +55,7 @@ class scantools:
         self.split_dir = self.dir + "VCFs/"
 
 
+
     def removePop(self, popname):
         popname = str(popname)
         if popname in self.pops:
@@ -75,6 +76,10 @@ class scantools:
             vcf_dir += "/"
         outdir = self.split_dir
         self.vcf_dir = vcf_dir
+
+        summary = open(self.dir + "vcf_dir.txt", 'w')
+        summary.write('VCF Directory = ' + self.vcf_dir + '\n')
+        summary.close()
 
         mem1 = int(mem / 1000)
 
@@ -241,7 +246,7 @@ class scantools:
     # CALCULATE WITHIN POPULATION METRICS
     def calcwpm(self, recode_dir, window_size, min_snps, population="all", print1=False, mem=16000, numcores=1, sampind="-99"):
         if sampind == "-99":
-            sind = self.samp_ind
+            sind = self.min_ind - 1
         else:
             sind = sampind
         if population == "all":
@@ -252,11 +257,6 @@ class scantools:
             recode_dir += "/"
 
         if os.path.exists(recode_dir) is True:
-            summary = open(recode_dir + "WPMInputSummary.txt", 'w')
-            summary.write('VCF Directory = ' + self.vcf_dir + '\n' +
-                          'Window size in bp = ' + str(window_size) + '\n' +
-                          "Minimum number of SNPs per window  = " + str(min_snps) + "\n")
-            summary.close()
 
             for pop in pops:
                 shfile3 = open(pop + '.sh', 'w')
