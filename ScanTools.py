@@ -404,8 +404,7 @@ class scantools:
 
             for metric in metrics:
                 data[metric + '.out'] = 0
-                print(data.quantile(q=percentile, axis=1))
-                print(data[metric].quantile(q=percentile, axis=1))
+                print(data[metric].quantile(q=percentile))
                 if tails == 'both':
                     data[metric + '.out'].loc[(data[metric] > data.quantile(q=percentile, axis=1))] = 1
                     data[metric + '.out'].loc[(data[metric] < data.quantile(q=1.0 - percentile, axis=1))] = 1
@@ -421,7 +420,7 @@ class scantools:
             df_outlier = data[(data.num_outliers != 0)]
             df_outlier.to_csv(recode_dir + in_file.replace(".txt", "") + '_' + str(percentile) + 'tile_OutOnly.csv', index=False)
             df_outlier.to_csv(recode_dir + in_file.replace(".txt", "") + '_' + str(percentile) + 'tile_OutOnly.bed', index=False, sep='\t', columns=["scaffold", "start", "end"], header=False)
-
+        return data
 
     def annotateOutliers(self, recode_dir, in_file, basename, annotation_file, overlap_proportion=0.000001):
         '''Call: annotateOutliers(self, recode_dir, in_file, basename, annotation_file, overlap_proportion=0.000001)
