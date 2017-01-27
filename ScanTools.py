@@ -382,7 +382,7 @@ class scantools:
             print("Did not find recode_dir.  Must run splitVCFs followed by recode before able to calculate between population metrics")
 
 
-    def findOutliers(self, recode_dir, in_file, column_index_list, percentile, metrics, tails='upper'):
+    def findOutliers(self, recode_dir, in_file, column_index_list, percentile, tails='upper'):
         '''Call: findOutliers(self, recode_dir, in_file, column_index_list, percentile, metrics, tails='upper')
            Purpose:  Take output from either calcwpm or calcbpm and determine outlier metrics for a given percentile.
            Notes: Output will be two csv files (one containing all sites with outliers indicated by 0 or 1 and another containing just outliers)
@@ -401,11 +401,10 @@ class scantools:
             metrics = []
             for i in column_index_list:
                 metrics.append(list(data.columns.values)[i])
-            data.sort(metrics, ascending=[1 for x in range(0, len(metrics))])
+            print(metrics)
 
             for metric in metrics:
                 data[metric + '.out'] = 0
-                data = data.sort([metric], ascending=[0])
                 if tails == 'both':
                     data[metric + '.out'].loc[(data[metric] > data.quantile(q=percentile, axis=1))] = 1
                     data[metric + '.out'].loc[(data[metric] < data.quantile(q=1.0 - percentile, axis=1))] = 1
@@ -491,7 +490,7 @@ class scantools:
         for pop in pops:
             if os.path.exists(recode_dir + pop + '.table.recode.txt') is True:
                 shfile4 = open(pop + '.repol.sh', 'w')
-
+,
                 shfile4.write('#!/bin/bash\n' +
                               '#SBATCH -J ' + pop + '.repol.sh' + '\n' +
                               '#SBATCH -e ' + self.oande + pop + '.repol.err' + '\n' +
