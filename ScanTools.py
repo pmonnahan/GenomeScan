@@ -404,14 +404,13 @@ class scantools:
 
             for metric in metrics:
                 data[metric + '.out'] = 0
-                print(data[metric].quantile(q=percentile))
                 if tails == 'both':
-                    data[metric + '.out'].loc[(data[metric] > data.quantile(q=percentile, axis=1))] = 1
-                    data[metric + '.out'].loc[(data[metric] < data.quantile(q=1.0 - percentile, axis=1))] = 1
+                    data[metric + '.out'].loc[(data[metric] > data[metric].quantile(q=percentile))] = 1
+                    data[metric + '.out'].loc[(data[metric] < data[metric].quantile(q=1.0 - percentile))] = 1
                 elif tails == 'lower':
-                    data[metric + '.out'].loc[(data[metric] < data.quantile(q=1.0 - percentile, axis=1))] = 1
+                    data[metric + '.out'].loc[(data[metric] < data[metric].quantile(q=1.0 - percentile))] = 1
                 elif tails == 'upper':
-                    data[metric + '.out'].loc[(data[metric] > data.quantile(q=percentile, axis=1))] = 1
+                    data[metric + '.out'].loc[(data[metric] > data[metric].quantile(q=percentile))] = 1
                 else:
                     print("Did not specify tails option correctly.  Options are: both, upper, and lower")
             data['num_outliers'] = data.iloc[:, -len(metrics):].sum(1)
