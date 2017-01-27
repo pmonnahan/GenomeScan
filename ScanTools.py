@@ -401,10 +401,11 @@ class scantools:
             metrics = []
             for i in column_index_list:
                 metrics.append(list(data.columns.values)[i])
-            print(metrics)
 
             for metric in metrics:
                 data[metric + '.out'] = 0
+                print(data.quantile(q=percentile, axis=1))
+                print(data[metric].quantile(q=percentile, axis=1))
                 if tails == 'both':
                     data[metric + '.out'].loc[(data[metric] > data.quantile(q=percentile, axis=1))] = 1
                     data[metric + '.out'].loc[(data[metric] < data.quantile(q=1.0 - percentile, axis=1))] = 1
@@ -490,7 +491,6 @@ class scantools:
         for pop in pops:
             if os.path.exists(recode_dir + pop + '.table.recode.txt') is True:
                 shfile4 = open(pop + '.repol.sh', 'w')
-,
                 shfile4.write('#!/bin/bash\n' +
                               '#SBATCH -J ' + pop + '.repol.sh' + '\n' +
                               '#SBATCH -e ' + self.oande + pop + '.repol.err' + '\n' +
