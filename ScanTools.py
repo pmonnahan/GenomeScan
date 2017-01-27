@@ -489,6 +489,7 @@ class scantools:
         key_list = []
         for i, line in enumerate(key):
             line = line.strip("\n").split("\t")
+            print(line)
             scaff = line[0]
             pos = line[1]
             if i == 0:
@@ -500,21 +501,27 @@ class scantools:
                 key_list.append(Scaff)
                 Scaff = [pos]
                 old_scaff = scaff
+            key_list.append(Scaff)
 
         new = open(recode_dir + in_file.replace(".txt", ".repol.txt"), 'w')
         if os.path.exists(recode_dir + in_file) is True:
             with open(recode_dir + in_file) as inf:
                 for j, line in enumerate(inf):
-                    line = line.strip("\n").strip("\t").split("\t")
-                    pop, ploidy, scaff, pos, ac, an, dp = line[:7]
-                    pos = pos
+                    cols = line.strip("\n").strip("\t").split("\t")
+                    pop, ploidy, scaff, pos, ac, an, dp = cols[:7]
                     scaff = int(scaff.split("_")[1])
-                    newline = pop + "\t" + ploidy + "\t" + scaff + "\t" + pos + "\t" + ac + "\t" + an + "\t" + dp + "\t"
-                    if pos in key_list[scaff]:
-                        for geno in line[7:]:
-                            newline += str(int(ploidy) - int(geno)) + "\t"
-                        newline.strip("\t")
+                    newline = pop + "\t" + str(ploidy) + "\tscaffold_" + str(scaff) + "\t" + pos + "\t" + ac + "\t" + an + "\t" + dp + "\t"
+                    if pos in key_list[scaff - 1]:
+                        print(1, pos)
+                        print(line)
+                        for geno in cols[7:]:
+                            if geno != "-9":
+                                newline += str(int(float(ploidy)) - int(geno)) + "\t"
+                            else:
+                                newline += "-9\t"
+                        newline = newline.strip("\t") + "\n"
                         new.write(newline)
+                        print(newline)
                     else:
                         new.write(line)
 
