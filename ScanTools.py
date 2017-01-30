@@ -78,7 +78,7 @@ class scantools:
 
         if vcf_dir.endswith("/") is False:
             vcf_dir += "/"
-        outdir = self.dir + "/VCF.DP" + str(min_dp) + ".M" + str(mffg) + "/"
+        outdir = self.dir + "VCF.DP" + str(min_dp) + ".M" + str(mffg) + "/"
         self.vcf_dir = vcf_dir
 
         summary = open(self.dir + "vcf_dir.txt", 'w')
@@ -128,7 +128,7 @@ class scantools:
                               '#SBATCH --mem=' + str(mem) + '\n' +
                               'source GATK-3.6.0\n' +
                               'java -Xmx' + str(mem1) + 'g -jar /nbi/software/testing/GATK/3.6.0/src/GenomeAnalysisTK.jar -T SelectVariants -R ' + ref_path + ' -V ' + vcf_dir + vcf + sample_string1 + ' -o ' + outdir + vcf_basenames[v] + '.' + pop + '.vcf\n' +
-                              'java -Xmx' + str(mem1) + 'g -jar /nbi/software/testing/GATK/3.6.0/src/GenomeAnalysisTK.jar -T VariantFiltration -R ' + ref_path + ' -V ' + outdir + vcf_basenames[v] + '.' + pop + '.vcf --genotypeFilterExpression "DP <= " ' + str(min_dp) + ' -o ' + outdir + vcf_basenames[v] + '.' + pop + '.dp' + str(min_dp) + '.vcf\n' +
+                              'java -Xmx' + str(mem1) + 'g -jar /nbi/software/testing/GATK/3.6.0/src/GenomeAnalysisTK.jar -T VariantFiltration -R ' + ref_path + ' -V ' + outdir + vcf_basenames[v] + '.' + pop + '.vcf --genotypeFilterExpression "DP <= ' + str(min_dp) + '"' + ' -o ' + outdir + vcf_basenames[v] + '.' + pop + '.dp' + str(min_dp) + '.vcf\n' +
                               'java -Xmx' + str(mem1) + 'g -jar /nbi/software/testing/GATK/3.6.0/src/GenomeAnalysisTK.jar -T SelectVariants -R ' + ref_path + ' -V ' + outdir + vcf_basenames[v] + '.' + pop + '.dp' + str(min_dp) + '.vcf --restrictAllelesTo BIALLELIC --maxFilteredGenotypes ' + str(mfg) + ' -env -o ' + outdir + vcf_basenames[v] + '.' + pop + '.m' + str(mffg) + '.dp' + str(min_dp) + '.bi.vcf\n' +
                               'java -Xmx' + str(mem1) + 'g -jar /nbi/software/testing/GATK/3.6.0/src/GenomeAnalysisTK.jar -T VariantsToTable -R ' + ref_path + ' -V ' + outdir + vcf_basenames[v] + '.' + pop + '.m' + str(mffg) + '.dp' + str(min_dp) + '.bi.vcf -F CHROM -F POS -F AC -F AN -F DP -GF GT -o ' + outdir + vcf_basenames[v] + '.' + pop + '_raw.table\n'
                               'gzip ' + outdir + vcf_basenames[v] + '.' + pop + '.vcf')
