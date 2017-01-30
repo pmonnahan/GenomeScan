@@ -52,8 +52,6 @@ class scantools:
         self.min_ind = min_ind
         self.dir = WorkingDir
         self.oande = WorkingDir + "OandE/"
-        self.split_dir = self.dir + "VCFs/"
-
 
 
     def removePop(self, popname):
@@ -71,16 +69,16 @@ class scantools:
             print("Population does not exist")
 
 
-    def splitVCFs(self, vcf_dir, ref_path, min_dp, mem=16000, numcores=1, print1=False, overwrite=False):
+    def splitVCFs(self, vcf_dir, ref_path, min_dp, mffg, pops='all', mem=16000, numcores=1, print1=False, overwrite=False, partition="long"):
         '''Call: splitVCFs(self, vcf_dir, ref_path, min_dp, mem=16000, numcores=1, print1=False, overwrite=False)
            Purpose:  Find all vcfs in vcf_dir and split them by population according to samples associated with said population.said
                     Then, take only biallelic snps and convert vcf to table containing scaff, pos, ac, an, dp, and genotype fields.vcf
-                    Finally, concatenate all per-scaffold tables to one giant table. Resulting files will be put into ~/Working_Dir/VCFs/'''
+                    Finally, concatenate all per-scaffold tables to one giant table. Resulting files will be put into ~/Working_Dir/VCFs/
+            Notes: mffg is maximum fraction of filtered genotypes.  Number of actual genotypes allowed will be rounded up'''
 
-        # ADD FUNCTIONALITY TO FILTER GENOTYPES BASED ON READ DEPTH
         if vcf_dir.endswith("/") is False:
             vcf_dir += "/"
-        outdir = self.split_dir
+        outdir = self.dir + "/VCF.DP" + str(min_dp) + ".M" + str(mffg) + "/"
         self.vcf_dir = vcf_dir
 
         summary = open(self.dir + "vcf_dir.txt", 'w')
@@ -96,12 +94,17 @@ class scantools:
         else:
             print("Overwriting files in existing VCF directory")
 
-        for pop in self.pops:
+        if pops == 'all':
+            pops = self.pops
+
+        for pop in pops:
             # Add samples to list for each population according to PF file
             sample_string1 = ""
             for samp in self.samps[pop]:
                 sample_string1 += " -sn " + samp
             joblist = []
+
+            mfg = int(math.ceil(float(self.samp_nums[pop]) * float(mffg)))
 
             vcf_list = []
             vcf_basenames = []
@@ -119,14 +122,15 @@ class scantools:
                               '#SBATCH -J ' + pop + '.sh' + '\n' +
                               '#SBATCH -e ' + self.oande + pop + vcf + '.gatk.err' + '\n' +
                               '#SBATCH -o ' + self.oande + pop + vcf + '.gatk.out' + '\n' +
-                              '#SBATCH -p nbi-medium\n' +
+                              '#SBATCH -p nbi-' + str(partition) + '\n' +
                               '#SBATCH -n ' + str(numcores) + '\n' +
                               '#SBATCH -t 0-4:00\n' +
                               '#SBATCH --mem=' + str(mem) + '\n' +
                               'source GATK-3.6.0\n' +
                               'java -Xmx' + str(mem1) + 'g -jar /nbi/software/testing/GATK/3.6.0/src/GenomeAnalysisTK.jar -T SelectVariants -R ' + ref_path + ' -V ' + vcf_dir + vcf + sample_string1 + ' -o ' + outdir + vcf_basenames[v] + '.' + pop + '.vcf\n' +
-                              'java -Xmx' + str(mem1) + 'g -jar /nbi/software/testing/GATK/3.6.0/src/GenomeAnalysisTK.jar -T SelectVariants -R ' + ref_path + ' -V ' + outdir + vcf_basenames[v] + '.' + pop + '.vcf --restrictAllelesTo BIALLELIC -env -o ' + outdir + vcf_basenames[v] + '.' + pop + '.bi.vcf\n' +
-                              'java -Xmx' + str(mem1) + 'g -jar /nbi/software/testing/GATK/3.6.0/src/GenomeAnalysisTK.jar -T VariantsToTable -R ' + ref_path + ' -V ' + outdir + vcf_basenames[v] + '.' + pop + '.bi.vcf -F CHROM -F POS -F AC -F AN -F DP -GF GT -o ' + outdir + vcf_basenames[v] + '.' + pop + '_raw.table\n'
+                              'java -Xmx' + str(mem1) + 'g -jar /nbi/software/testing/GATK/3.6.0/src/GenomeAnalysisTK.jar -T VariantFiltration -R ' + ref_path + ' -V ' + outdir + vcf_basenames[v] + '.' + pop + '.vcf --genotypeFilterExpression "DP <= " ' + str(min_dp) + ' -o ' + outdir + vcf_basenames[v] + '.' + pop + '.dp' + str(min_dp) + '.vcf\n' +
+                              'java -Xmx' + str(mem1) + 'g -jar /nbi/software/testing/GATK/3.6.0/src/GenomeAnalysisTK.jar -T SelectVariants -R ' + ref_path + ' -V ' + outdir + vcf_basenames[v] + '.' + pop + '.dp' + str(min_dp) + '.vcf --restrictAllelesTo BIALLELIC --maxFilteredGenotypes ' + str(mfg) + ' -env -o ' + outdir + vcf_basenames[v] + '.' + pop + '.m' + str(mffg) + '.dp' + str(min_dp) + '.bi.vcf\n' +
+                              'java -Xmx' + str(mem1) + 'g -jar /nbi/software/testing/GATK/3.6.0/src/GenomeAnalysisTK.jar -T VariantsToTable -R ' + ref_path + ' -V ' + outdir + vcf_basenames[v] + '.' + pop + '.m' + str(mffg) + '.dp' + str(min_dp) + '.bi.vcf -F CHROM -F POS -F AC -F AN -F DP -GF GT -o ' + outdir + vcf_basenames[v] + '.' + pop + '_raw.table\n'
                               'gzip ' + outdir + vcf_basenames[v] + '.' + pop + '.vcf')
                 shfile1.close()
 
@@ -169,19 +173,21 @@ class scantools:
             os.remove(pop + '.sh')
 
 
-    def recode(self, min_avg_dp, missingness, print1=False, mem=16000, numcores=1):
+    def recode(self, split_dir, pops="all", print1=False, mem=16000, numcores=1, partition="medium"):
         '''Call: recode(self, min_avg_dp, missingness, print1=False, mem=16000, numcores=1)
            Purpose: Take the concatenated table files in ~/Working_Dir/VCFs/ and recode them so that genotypes are represented as number of alternative alleles
-           Notes: Also, adds population name and ploidy as columns in file.  Files are output to a folder named ~/Working_Dir/Recoded.DPXX.MX.X/ where the Xs are user specified
+           Notes: split_dir is the directory of split vcfs generated by splitVCFs().  Also, adds population name and ploidy as columns in file.  Files are output to a folder named ~/Working_Dir/Recoded.DPXX.MX.X/ where the Xs are user specified
                     These directories will be primary depositories for all subsequent commands.'''
 
-        sampind = int(math.ceil(self.min_ind * (1.0 - missingness)))
-        if sampind == self.min_ind and missingness != 0.0:
-            sampind = self.min_ind - 1
-        self.samp_ind = sampind
         # Determine if the recoded vcf files already exist and if so, set VCF_Parse to False
-        recode_dir = self.dir + "Recoded.DP" + str(min_avg_dp) + ".M" + str(missingness) + "/"
-        if os.path.exists(self.split_dir) is True:
+        if split_dir.endswith("/"):
+            recode_dir = split_dir - "/"
+            recode_dir += ".Recoded/"
+        else:
+            recode_dir = split_dir + ".Recoded/"
+            split_dir += "/"
+
+        if os.path.exists(split_dir) is True:
             existing_files = []
             if os.path.exists(recode_dir) is False:
                 os.mkdir(recode_dir)
@@ -194,7 +200,9 @@ class scantools:
             # Look for '.recode' table files corresponding to POP_names...if they exist...skip all but wpm step and print message to output.
 
             else:
-                for pop in self.pops:
+                if pops == "all":
+                    pops = self.pops
+                for pop in pops:
                     # FORMAT TABLE FOR WPM FILE.
 
                     shfile3 = open(pop + '.sh', 'w')
@@ -202,13 +210,13 @@ class scantools:
                                   '#SBATCH -J ' + pop + '.sh' + '\n' +
                                   '#SBATCH -e ' + self.oande + pop + '.recode012.err' + '\n' +
                                   '#SBATCH -o ' + self.oande + pop + '.recode012.out' + '\n' +
-                                  '#SBATCH -p nbi-medium\n' +
+                                  '#SBATCH -p nbi-' + str(partition) + '\n' +
                                   '#SBATCH -n ' + str(numcores) + '\n' +
                                   '#SBATCH -t 1-00:00\n' +
                                   '#SBATCH --mem=' + str(mem) + '\n' +
                                   'source python-3.5.1\n' +
                                   'source env/bin/activate\n' +
-                                  'python3 /usr/users/JIC_c1/monnahap/GenomeScan/recode012.py -i ' + self.split_dir + pop + '.table -pop ' + pop + ' -mf ' + str(1.0 - missingness) + ' -dp ' + str(min_avg_dp) + ' -o ' + recode_dir + '\n')
+                                  'python3 /usr/users/JIC_c1/monnahap/GenomeScan/recode012.py -i ' + split_dir + pop + '.table -pop ' + pop + ' -o ' + recode_dir + '\n')
                     shfile3.close()
 
                     if print1 is False:
@@ -257,12 +265,15 @@ class scantools:
             print("recode_dir does not exist")
 
     # CALCULATE WITHIN POPULATION METRICS
-    def calcwpm(self, recode_dir, window_size, min_snps, population="all", print1=False, mem=16000, numcores=1, sampind="-99"):
+    def calcwpm(self, recode_dir, window_size, min_snps, population="all", print1=False, mem=16000, numcores=1, sampind="-99", partition="medium"):
         '''Call: calcwpm(self, recode_dir, window_size, min_snps, population="all", print1=False, mem=16000, numcores=1, sampind="-99")
            Purpose: Calculate within population metrics including: allele frequency, expected heterozygosity, Wattersons theta, Pi, ThetaH, ThetaL and neutrality tests: D, normalized H, E
            Notes:  Currently, all populations are downsampled to same number of individuals.  By default, this minimum individuals across populations minus 1 to allow for some missing data
                     It is worth considering whether downsampling should be based on number of individuals or number of alleles.
                     Results are held ~/Working_Dir/Recoded/ in series of files ending in _WPM.txt.  These can be concatenated using concatWPM'''
+
+        # Add pops functionality here as well
+
         if sampind == "-99":
             sind = self.min_ind - 1
         else:
@@ -283,7 +294,7 @@ class scantools:
                               '#SBATCH -J ' + pop + '.sh' + '\n' +
                               '#SBATCH -e ' + self.oande + pop + '.wpm.err' + '\n' +
                               '#SBATCH -o ' + self.oande + pop + '.wpm.out' + '\n' +
-                              '#SBATCH -p nbi-medium\n' +
+                              '#SBATCH -p nbi-' + str(partition) + '\n' +
                               '#SBATCH -n ' + str(numcores) + '\n' +
                               '#SBATCH -t 1-00:00\n' +
                               '#SBATCH --mem=' + str(mem) + '\n' +
@@ -328,7 +339,7 @@ class scantools:
                     print("Did not find _WPM.txt file for population: ", pop)
 
 
-    def calcbpm(self, recode_dir, pops, output_name, window_size, minimum_snps, print1=False, mem=16000, numcores=1):
+    def calcbpm(self, recode_dir, pops, output_name, window_size, minimum_snps, print1=False, mem=16000, numcores=1, partition="medium"):
         '''Call: calcbpm(self, recode_dir, pops, output_name, window_size, minimum_snps, print1=False, mem=16000, numcores=1)
            Purpose:  Calculate between population metrics including: Dxy, Fst (using Weir and Cockerham 1984), and Rho (Ronfort et al. 1998)
            Notes: User provides a list of populations to be included.  For pairwise estimates, simply provide two populations
@@ -358,7 +369,7 @@ class scantools:
                           '#SBATCH -J ' + output_name + '.bpm.sh' + '\n' +
                           '#SBATCH -e ' + self.oande + output_name + '.bpm.err' + '\n' +
                           '#SBATCH -o ' + self.oande + output_name + '.bpm.out' + '\n' +
-                          '#SBATCH -p nbi-medium\n' +
+                          '#SBATCH -p nbi-' + str(partition) + '\n' +
                           '#SBATCH -n ' + str(numcores) + '\n' +
                           '#SBATCH -t 1-00:00\n' +
                           '#SBATCH --mem=' + str(mem) + '\n' +
@@ -438,7 +449,7 @@ class scantools:
                           '#SBATCH -o GS.bedtools.out\n' +
                           '#SBATCH -p nbi-short\n' +
                           '#SBATCH -n 1\n' +
-                          '#SBATCH -t 0-12:00\n' +
+                          '#SBATCH -t 0-02:00\n' +
                           '#SBATCH --mem=16000\n' +
                           'source bedtools-2.17.0\n' +
                           'bedtools intersect -a ' + recode_dir + in_file + ' -b ' + annotation_file + ' -f ' + str(overlap_proportion) + ' -wb | ' +

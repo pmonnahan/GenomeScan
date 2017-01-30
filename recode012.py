@@ -3,8 +3,6 @@ import argparse
 # create variables that can be entered in the command line
 parser = argparse.ArgumentParser()
 parser.add_argument('-i', type=str, metavar='input_table_file', required=True, help='path to input table file (from -VariantsToTable) of scaffolds containing just scaff, pos, ac, an, dp and GT fields in that order')
-parser.add_argument('-mf', type=float, metavar='min_fraction', required=True, default=0.75, help='minimum fraction of individuals with genotype calls in order for site to be included in output')
-parser.add_argument('-dp', type=int, metavar='min_depth', required=True, default=10, help='minimum depth per individual')
 parser.add_argument('-o', type=str, metavar='output_directory', required=True, help='')
 parser.add_argument('-pop', type=str, metavar='population_name', required=True, help='')
 
@@ -18,7 +16,6 @@ if args.o.endswith("/") is False:
 with open(args.i, "rU") as table:
     prefix = args.i[:-6]
     GTfile = open(args.o + filename + ".recode.txt", "w")
-    numsites = 0
     for i, line in enumerate(table):
         line = line.strip("\n")
         line = line.split("\t")
@@ -57,9 +54,6 @@ with open(args.i, "rU") as table:
                 print(i)
             GT.strip("\t")
             GT += "\n"
-            if float(numobs) / float(numind) >= args.mf and dp >= args.dp * len(line[5:]):
-                numsites += 1
-                GTfile.write(GT)
+            GTfile.write(GT)
 
     print("number of individuals = ", numind)
-    print("number of sites = ", numsites)
