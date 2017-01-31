@@ -94,83 +94,83 @@ class scantools:
         else:
             print("Overwriting files in existing VCF directory")
 
-        if pops == 'all':
-            pops = self.pops
+            if pops == 'all':
+                pops = self.pops
 
-        for pop in pops:
-            # Add samples to list for each population according to PF file
-            sample_string1 = ""
-            for samp in self.samps[pop]:
-                sample_string1 += " -sn " + samp
-            joblist = []
+            for pop in pops:
+                # Add samples to list for each population according to PF file
+                sample_string1 = ""
+                for samp in self.samps[pop]:
+                    sample_string1 += " -sn " + samp
+                joblist = []
 
-            mfg = int(math.ceil(float(self.samp_nums[pop]) * float(mffg)))
+                mfg = int(math.ceil(float(self.samp_nums[pop]) * float(mffg)))
 
-            vcf_list = []
-            vcf_basenames = []
-            for file in os.listdir(vcf_dir):
-                if file[-6:] == 'vcf.gz':
-                    vcf_list.append(file)
-                    vcf_basenames.append(file[:-7])
-                elif file[-3:] == 'vcf':
-                    vcf_list.append(file)
-                    vcf_basenames.append(file[:-4])
-            for v, vcf in enumerate(vcf_list):
-                # Select single population and biallelic SNPs for each scaffold and convert to variants table
-                shfile1 = open(pop + '.sh', 'w')
-                shfile1.write('#!/bin/bash\n' +
+                vcf_list = []
+                vcf_basenames = []
+                for file in os.listdir(vcf_dir):
+                    if file[-6:] == 'vcf.gz':
+                        vcf_list.append(file)
+                        vcf_basenames.append(file[:-7])
+                    elif file[-3:] == 'vcf':
+                        vcf_list.append(file)
+                        vcf_basenames.append(file[:-4])
+                for v, vcf in enumerate(vcf_list):
+                    # Select single population and biallelic SNPs for each scaffold and convert to variants table
+                    shfile1 = open(pop + '.sh', 'w')
+                    shfile1.write('#!/bin/bash\n' +
+                                  '#SBATCH -J ' + pop + '.sh' + '\n' +
+                                  '#SBATCH -e ' + self.oande + pop + vcf + '.gatk.err' + '\n' +
+                                  '#SBATCH -o ' + self.oande + pop + vcf + '.gatk.out' + '\n' +
+                                  '#SBATCH -p nbi-' + str(partition) + '\n' +
+                                  '#SBATCH -n ' + str(numcores) + '\n' +
+                                  '#SBATCH -t 0-4:00\n' +
+                                  '#SBATCH --mem=' + str(mem) + '\n' +
+                                  'source GATK-nightly.2016.09.26\n' +
+                                  'java -Xmx' + str(mem1) + 'g -jar /nbi/software/testing/GATK/nightly.2016.09.26/x86_64/jars/GenomeAnalysisTK.jar -T SelectVariants -R ' + ref_path + ' -V ' + vcf_dir + vcf + sample_string1 + ' -o ' + outdir + vcf_basenames[v] + '.' + pop + '.vcf\n' +
+                                  'java -Xmx' + str(mem1) + 'g -jar /nbi/software/testing/GATK/nightly.2016.09.26/x86_64/jars/GenomeAnalysisTK.jar -T VariantFiltration -R ' + ref_path + ' -V ' + outdir + vcf_basenames[v] + '.' + pop + '.vcf --genotypeFilterExpression "DP <= ' + str(min_dp) + '" --genotypeFilterName "DP" -o ' + outdir + vcf_basenames[v] + '.' + pop + '.dp' + str(min_dp) + '.vcf\n' +
+                                  'java -Xmx' + str(mem1) + 'g -jar /nbi/software/testing/GATK/nightly.2016.09.26/x86_64/jars/GenomeAnalysisTK.jar -T SelectVariants -R ' + ref_path + ' -V ' + outdir + vcf_basenames[v] + '.' + pop + '.dp' + str(min_dp) + '.vcf --restrictAllelesTo BIALLELIC --maxFilteredGenotypes ' + str(mfg) + ' -env -o ' + outdir + vcf_basenames[v] + '.' + pop + '.m' + str(mffg) + '.dp' + str(min_dp) + '.bi.vcf\n' +
+                                  'java -Xmx' + str(mem1) + 'g -jar /nbi/software/testing/GATK/nightly.2016.09.26/x86_64/jars/GenomeAnalysisTK.jar -T VariantsToTable -R ' + ref_path + ' -V ' + outdir + vcf_basenames[v] + '.' + pop + '.m' + str(mffg) + '.dp' + str(min_dp) + '.bi.vcf -F CHROM -F POS -F AC -F AN -F DP -GF GT -o ' + outdir + vcf_basenames[v] + '.' + pop + '_raw.table\n'
+                                  'gzip ' + outdir + vcf_basenames[v] + '.' + pop + '.vcf')
+                    shfile1.close()
+
+                    if print1 is False:  # send slurm job to NBI SLURM cluster
+                        cmd1 = ('sbatch ' + pop + '.sh')
+                        p1 = subprocess.Popen(cmd1, shell=True)
+                        sts1 = os.waitpid(p1.pid, 0)[1]
+                        joblist.append(p1.pid)
+
+                    else:
+                        file1 = open(pop + '.sh', 'r')
+                        data1 = file1.read()
+                        print(data1)
+
+                    os.remove(pop + '.sh')
+
+                # combine all variants table for each scaffold within a population
+                shfile3 = open(pop + '.sh', 'w')
+
+                shfile3.write('#!/bin/bash\n' +
                               '#SBATCH -J ' + pop + '.sh' + '\n' +
-                              '#SBATCH -e ' + self.oande + pop + vcf + '.gatk.err' + '\n' +
-                              '#SBATCH -o ' + self.oande + pop + vcf + '.gatk.out' + '\n' +
-                              '#SBATCH -p nbi-' + str(partition) + '\n' +
+                              '#SBATCH -e ' + self.oande + pop + '.cat.err' + '\n' +
+                              '#SBATCH -o ' + self.oande + pop + '.cat.out' + '\n' +
+                              '#SBATCH -p nbi-medium\n' +
                               '#SBATCH -n ' + str(numcores) + '\n' +
-                              '#SBATCH -t 0-4:00\n' +
+                              '#SBATCH -t 0-12:00\n' +
                               '#SBATCH --mem=' + str(mem) + '\n' +
-                              'source GATK-3.6.0\n' +
-                              'java -Xmx' + str(mem1) + 'g -jar /nbi/software/testing/GATK/3.6.0/src/GenomeAnalysisTK.jar -T SelectVariants -R ' + ref_path + ' -V ' + vcf_dir + vcf + sample_string1 + ' -o ' + outdir + vcf_basenames[v] + '.' + pop + '.vcf\n' +
-                              'java -Xmx' + str(mem1) + 'g -jar /nbi/software/testing/GATK/3.6.0/src/GenomeAnalysisTK.jar -T VariantFiltration -R ' + ref_path + ' -V ' + outdir + vcf_basenames[v] + '.' + pop + '.vcf --genotypeFilterExpression "DP <= ' + str(min_dp) + '" --filterName "DP" -o ' + outdir + vcf_basenames[v] + '.' + pop + '.dp' + str(min_dp) + '.vcf\n' +
-                              'java -Xmx' + str(mem1) + 'g -jar /nbi/software/testing/GATK/3.6.0/src/GenomeAnalysisTK.jar -T SelectVariants -R ' + ref_path + ' -V ' + outdir + vcf_basenames[v] + '.' + pop + '.dp' + str(min_dp) + '.vcf --restrictAllelesTo BIALLELIC --maxFilteredGenotypes ' + str(mfg) + ' -env -o ' + outdir + vcf_basenames[v] + '.' + pop + '.m' + str(mffg) + '.dp' + str(min_dp) + '.bi.vcf\n' +
-                              'java -Xmx' + str(mem1) + 'g -jar /nbi/software/testing/GATK/3.6.0/src/GenomeAnalysisTK.jar -T VariantsToTable -R ' + ref_path + ' -V ' + outdir + vcf_basenames[v] + '.' + pop + '.m' + str(mffg) + '.dp' + str(min_dp) + '.bi.vcf -F CHROM -F POS -F AC -F AN -F DP -GF GT -o ' + outdir + vcf_basenames[v] + '.' + pop + '_raw.table\n'
-                              'gzip ' + outdir + vcf_basenames[v] + '.' + pop + '.vcf')
-                shfile1.close()
+                              'cat ' + outdir + '*' + pop + '_raw.table | tail -n+2 > ' + outdir + pop + '.table\n')
+                shfile3.close()
 
-                if print1 is False:  # send slurm job to NBI SLURM cluster
-                    cmd1 = ('sbatch ' + pop + '.sh')
-                    p1 = subprocess.Popen(cmd1, shell=True)
-                    sts1 = os.waitpid(p1.pid, 0)[1]
-                    joblist.append(p1.pid)
-
+                if print1 is False:
+                    cmd3 = ('sbatch -d singleton ' + pop + '.sh')
+                    p3 = subprocess.Popen(cmd3, shell=True)
+                    sts3 = os.waitpid(p3.pid, 0)[1]
                 else:
-                    file1 = open(pop + '.sh', 'r')
-                    data1 = file1.read()
-                    print(data1)
+                    file3 = open(pop + '.sh', 'r')
+                    data3 = file3.read()
+                    print(data3)
 
                 os.remove(pop + '.sh')
-
-            # combine all variants table for each scaffold within a population
-            shfile3 = open(pop + '.sh', 'w')
-
-            shfile3.write('#!/bin/bash\n' +
-                          '#SBATCH -J ' + pop + '.sh' + '\n' +
-                          '#SBATCH -e ' + self.oande + pop + '.cat.err' + '\n' +
-                          '#SBATCH -o ' + self.oande + pop + '.cat.out' + '\n' +
-                          '#SBATCH -p nbi-medium\n' +
-                          '#SBATCH -n ' + str(numcores) + '\n' +
-                          '#SBATCH -t 0-12:00\n' +
-                          '#SBATCH --mem=' + str(mem) + '\n' +
-                          'cat ' + outdir + '*' + pop + '_raw.table | tail -n+2 > ' + outdir + pop + '.table\n')
-            shfile3.close()
-
-            if print1 is False:
-                cmd3 = ('sbatch -d singleton ' + pop + '.sh')
-                p3 = subprocess.Popen(cmd3, shell=True)
-                sts3 = os.waitpid(p3.pid, 0)[1]
-            else:
-                file3 = open(pop + '.sh', 'r')
-                data3 = file3.read()
-                print(data3)
-
-            os.remove(pop + '.sh')
 
 
     def recode(self, split_dir, pops="all", print1=False, mem=16000, numcores=1, partition="medium"):
