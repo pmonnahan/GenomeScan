@@ -553,7 +553,7 @@ class scantools:
             concat_file = open(recode_dir + output_name + '.repol.concat.txt', 'w')
             for file in os.listdir(recode_dir):
                 if file.endswith(".repol.txt") and file.split(".")[0] in pops:
-                    pops.pop(file.split(".")[0])
+                    pops.remove(file.split(".")[0])
                     with open(recode_dir + file) as infile:
                         for line in infile:
                             concat_file.write(line)
