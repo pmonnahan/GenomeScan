@@ -58,7 +58,7 @@ class scantools:
         for path in os.listdir(self.dir):
             if path.endswith(".Recoded") is True:
                 self.recode_dirs.append(path)
-            if path.split(".")[0] == "VCF":
+            elif path.split(".")[0] == "VCF":
                 self.split_dirs.append(path)
 
 
@@ -542,6 +542,11 @@ class scantools:
         if recode_dir.endswith("/") is False:
             recode_dir += "/"
 
+        outdir = recode_dir + "FSC2input_" + output_name + "/"
+
+        if os.path.exists(outdir) is False:
+            os.mkdir(outdir)
+
         # num_inds = [self.samp_nums.get(x) for x in pops]
         if os.path.exists(recode_dir) is True:
             print("Concatenating input files")
@@ -568,7 +573,7 @@ class scantools:
                           '#SBATCH --mem=' + str(mem) + '\n' +
                           'source python-3.5.1\n' +
                           'source env/bin/activate\n' +
-                          'python3 /usr/users/JIC_c1/monnahap/GenomeScan/FSC2input.py -i ' + recode_dir + output_name + '.repol.concat.txt -o ' + recode_dir + ' -prefix ' + output_name + ' -ws ' + str(bootstrap_block_size) + ' -bs ' + str(bootstrap_reps) + '\n')
+                          'python3 /usr/users/JIC_c1/monnahap/GenomeScan/FSC2input.py -i ' + recode_dir + output_name + '.repol.concat.txt -o ' + outdir + ' -prefix ' + output_name + ' -ws ' + str(bootstrap_block_size) + ' -bs ' + str(bootstrap_reps) + '\n')
             shfile4.close()
 
             cmd1 = ('sbatch ' + output_name + '.fsc2input.sh')
