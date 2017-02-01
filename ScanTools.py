@@ -181,7 +181,7 @@ class scantools:
 
         # Determine if the recoded vcf files already exist and if so, set VCF_Parse to False
         if split_dir.endswith("/"):
-            recode_dir = split_dir - "/"
+            recode_dir = split_dir[:-1]
             recode_dir += ".Recoded/"
         else:
             recode_dir = split_dir + ".Recoded/"
