@@ -146,4 +146,4 @@ if __name__ == '__main__':  # Used to run code from command line
 
     args = parser.parse_args()
 
-    j1, j2 = generateFSC2input(args.i, args.o, args.np, args.prefix, args.ws, args.bs)
+    j1, j2 = generateFSC2input(args.i, args.o, args.prefix, args.np, args.ws, args.bs)
