@@ -122,7 +122,7 @@ def generateFSC2input(input_file, output, outname, numpops, window_size, num_boo
             old_pos = pos
 
     for state in range(num_states):
-        out.write()
+        out.write(dsfs[state])
         for rep in range(0, num_bootstraps):
             entry = DSFS[str(rep)][state]
             entry = str(entry) + "\t"
