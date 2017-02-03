@@ -62,6 +62,7 @@ def generateFSC2input(input_file, output, outname, numpops, window_size, num_boo
             string = str(numpops) + "\t\t\t"
             string1 = ""
             for pop_site in Locus:
+
                 num_ind = len(pop_site[7:])
                 ploidy = int(float(pop_site[1]))
                 num_inds.append(num_ind)
@@ -86,7 +87,7 @@ def generateFSC2input(input_file, output, outname, numpops, window_size, num_boo
                 DSFS[str(rep)] = [0 for z in range(0, num_states + 1)]
                 exec("out%d.write('%s')" % (rep + 1, string), globals())
                 exec('out%d.write("""\n""")' % (rep + 1), globals())
-            out.write(str())
+            out.write(str(string))
 
         if pos == old_pos:  # Accruing information from multiple populations but same locus
             Locus.append(line)
@@ -122,7 +123,7 @@ def generateFSC2input(input_file, output, outname, numpops, window_size, num_boo
             old_pos = pos
 
     for state in range(num_states):
-        out.write(str(dsfs[state]))
+        out.write(str(dsfs[state] + "\t"))
         for rep in range(0, num_bootstraps):
             entry = DSFS[str(rep)][state]
             entry = str(entry) + "\t"
