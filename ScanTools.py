@@ -52,6 +52,7 @@ class scantools:
         self.min_ind = min_ind
         self.dir = WorkingDir
         self.oande = WorkingDir + "OandE/"
+        self.code_dir = os.getcwd()
 
         self.recode_dirs = []
         self.split_dirs = []
@@ -77,7 +78,7 @@ class scantools:
             print("Population does not exist")
 
 
-    def splitVCFs(self, vcf_dir, ref_path, min_dp, mffg, pops='all', mem=16000, numcores=1, print1=False, overwrite=False, partition="long"):
+    def splitVCFs(self, vcf_dir, ref_path, min_dp, mffg, pops='all', mem=16000, numcores=1, print1=False, overwrite=False, partition="long", keep_vcfs=False):
         '''Call: splitVCFs(self, vcf_dir, ref_path, min_dp, mem=16000, numcores=1, print1=False, overwrite=False)
            Purpose:  Find all vcfs in vcf_dir and split them by population according to samples associated with said population.said
                     Then, take only biallelic snps and convert vcf to table containing scaff, pos, ac, an, dp, and genotype fields.vcf
@@ -137,10 +138,13 @@ class scantools:
                                   '#SBATCH --mem=' + str(mem) + '\n' +
                                   'source GATK-nightly.2016.09.26\n' +
                                   'java -Xmx' + str(mem1) + 'g -jar /nbi/software/testing/GATK/nightly.2016.09.26/x86_64/jars/GenomeAnalysisTK.jar -T SelectVariants -R ' + ref_path + ' -V ' + vcf_dir + vcf + sample_string1 + ' -o ' + outdir + vcf_basenames[v] + '.' + pop + '.vcf\n' +
-                                  'java -Xmx' + str(mem1) + 'g -jar /nbi/software/testing/GATK/nightly.2016.09.26/x86_64/jars/GenomeAnalysisTK.jar -T VariantFiltration -R ' + ref_path + ' -V ' + outdir + vcf_basenames[v] + '.' + pop + '.vcf --genotypeFilterExpression "DP <= ' + str(min_dp) + '" --genotypeFilterName "DP" -o ' + outdir + vcf_basenames[v] + '.' + pop + '.dp' + str(min_dp) + '.vcf\n' +
-                                  'java -Xmx' + str(mem1) + 'g -jar /nbi/software/testing/GATK/nightly.2016.09.26/x86_64/jars/GenomeAnalysisTK.jar -T SelectVariants -R ' + ref_path + ' -V ' + outdir + vcf_basenames[v] + '.' + pop + '.dp' + str(min_dp) + '.vcf --restrictAllelesTo BIALLELIC --maxFilteredGenotypes ' + str(mfg) + ' -env -o ' + outdir + vcf_basenames[v] + '.' + pop + '.m' + str(mffg) + '.dp' + str(min_dp) + '.bi.vcf\n' +
-                                  'java -Xmx' + str(mem1) + 'g -jar /nbi/software/testing/GATK/nightly.2016.09.26/x86_64/jars/GenomeAnalysisTK.jar -T VariantsToTable -R ' + ref_path + ' -V ' + outdir + vcf_basenames[v] + '.' + pop + '.m' + str(mffg) + '.dp' + str(min_dp) + '.bi.vcf -F CHROM -F POS -F AC -F AN -F DP -GF GT -o ' + outdir + vcf_basenames[v] + '.' + pop + '_raw.table\n'
-                                  'gzip ' + outdir + vcf_basenames[v] + '.' + pop + '.vcf')
+                                  'java -Xmx' + str(mem1) + 'g -jar /nbi/software/testing/GATK/nightly.2016.09.26/x86_64/jars/GenomeAnalysisTK.jar -T VariantFiltration -R ' + ref_path + ' -V ' + outdir + vcf_basenames[v] + '.' + pop + '.vcf --genotypeFilterExpression "DP <= ' + str(min_dp) + '" --genotypeFilterName "DP" -o ' + outdir + vcf_basenames[v] + '.' + pop + '.dp' + str(min_dp) + '.1.vcf\n' +
+                                  'java -Xmx' + str(mem1) + 'g -jar /nbi/software/testing/GATK/nightly.2016.09.26/x86_64/jars/GenomeAnalysisTK.jar -T VariantFiltration -R ' + ref_path + ' -V ' + outdir + vcf_basenames[v] + '.' + pop + '.dp' + str(min_dp) + '.1.vcf --setFilteredGtToNocall -o ' + outdir + vcf_basenames[v] + '.' + pop + '.dp' + str(min_dp) + '.vcf\n' +
+                                  'java -Xmx' + str(mem1) + 'g -jar /nbi/software/testing/GATK/nightly.2016.09.26/x86_64/jars/GenomeAnalysisTK.jar -T SelectVariants -R ' + ref_path + ' -V ' + outdir + vcf_basenames[v] + '.' + pop + '.dp' + str(min_dp) + '.vcf --maxNOCALLnumber ' + str(mfg) + ' -o ' + outdir + vcf_basenames[v] + '.' + pop + '.m' + str(mffg) + '.dp' + str(min_dp) + '.bi.vcf\n' +
+                                  'java -Xmx' + str(mem1) + 'g -jar /nbi/software/testing/GATK/nightly.2016.09.26/x86_64/jars/GenomeAnalysisTK.jar -T VariantsToTable -R ' + ref_path + ' -V ' + outdir + vcf_basenames[v] + '.' + pop + '.m' + str(mffg) + '.dp' + str(min_dp) + '.bi.vcf -F CHROM -F POS -F AC -F AN -F DP -GF GT -o ' + outdir + vcf_basenames[v] + '.' + pop + '_raw.table\n')
+                    if keep_vcfs is False:
+                        shfile1.write('rm ' + outdir + '*.vcf\n')
+                        shfile1.write('rm ' + outdir + '*.vcf.idx\n')
                     shfile1.close()
 
                     if print1 is False:  # send slurm job to NBI SLURM cluster
@@ -227,7 +231,7 @@ class scantools:
                                   '#SBATCH --mem=' + str(mem) + '\n' +
                                   'source python-3.5.1\n' +
                                   'source env/bin/activate\n' +
-                                  'python3 /usr/users/JIC_c1/monnahap/GenomeScan/recode012.py -i ' + split_dir + pop + '.table -pop ' + pop + ' -o ' + recode_dir + '\n')
+                                  'python3 ' + self.code_dir + '/recode012.py -i ' + split_dir + pop + '.table -pop ' + pop + ' -o ' + recode_dir + '\n')
                     shfile3.close()
 
                     if print1 is False:
@@ -311,7 +315,7 @@ class scantools:
                               '#SBATCH --mem=' + str(mem) + '\n' +
                               'source python-3.5.1\n' +
                               'source env/bin/activate\n' +
-                              'python3 /usr/users/JIC_c1/monnahap/GenomeScan/wpm.py -i ' + recode_dir + pop + '.table.recode.txt -o ' + recode_dir + ' -sampind ' + str(sind) + ' -ws ' + str(window_size) + ' -ms ' + str(min_snps) + '\n')
+                              'python3 ' + self.code_dir + '/wpm.py -i ' + recode_dir + pop + '.table.recode.txt -o ' + recode_dir + ' -sampind ' + str(sind) + ' -ws ' + str(window_size) + ' -ms ' + str(min_snps) + '\n')
                 shfile3.close()
 
                 if print1 is False:
@@ -386,7 +390,7 @@ class scantools:
                           '#SBATCH --mem=' + str(mem) + '\n' +
                           'source python-3.5.1\n' +
                           'source env/bin/activate\n' +
-                          'python3 /usr/users/JIC_c1/monnahap/GenomeScan/bpm.py -i ' + recode_dir + output_name + '.table.recode.txt -o ' + recode_dir + ' -prefix ' + output_name + ' -ws ' + str(window_size) + ' -ms ' + str(minimum_snps) + '\n')
+                          'python3 ' + self.code_dir + '/bpm.py -i ' + recode_dir + output_name + '.table.recode.txt -o ' + recode_dir + ' -prefix ' + output_name + ' -ws ' + str(window_size) + ' -ms ' + str(minimum_snps) + '\n')
             shfile3.close()
 
             if print1 is False:
@@ -510,7 +514,7 @@ class scantools:
 
         for pop in pops:
             if os.path.exists(recode_dir + pop + '.table.recode.txt') is True:
-                shfile4 = open(pop + '.repol.sh', 'w')
+                shfile4 = open(pop + '.sh', 'w')
                 shfile4.write('#!/bin/bash\n' +
                               '#SBATCH -J ' + pop + '.repol.sh' + '\n' +
                               '#SBATCH -e ' + self.oande + pop + '.repol.err' + '\n' +
@@ -521,14 +525,14 @@ class scantools:
                               '#SBATCH --mem=' + str(mem) + '\n' +
                               'source python-3.5.1\n' +
                               'source env/bin/activate\n' +
-                              'python3 /usr/users/JIC_c1/monnahap/GenomeScan/repol.py -i ' + recode_dir + pop + '.table.recode.txt -o ' + recode_dir + pop + ' -r ' + repolarization_key + '\n')
+                              'python3 ' + self.code_dir + '/repol.py -i ' + recode_dir + pop + '.table.recode.txt -o ' + recode_dir + pop + ' -r ' + repolarization_key + '\n')
                 shfile4.close()
 
-                cmd1 = ('sbatch ' + pop + '.repol.sh')
+                cmd1 = ('sbatch -d singleton ' + pop + '.sh')
                 p1 = subprocess.Popen(cmd1, shell=True)
                 sts1 = os.waitpid(p1.pid, 0)[1]
 
-                os.remove(pop + '.repol.sh')
+                os.remove(pop + '.sh')
 
             else:
                 print("Did not find .table.recode.txt file for population: ", pop)
@@ -575,7 +579,7 @@ class scantools:
                           '#SBATCH --mem=' + str(mem) + '\n' +
                           'source python-3.5.1\n' +
                           'source env/bin/activate\n' +
-                          'python3 /usr/users/JIC_c1/monnahap/GenomeScan/FSC2input.py -i ' + recode_dir + output_name + '.repol.concat.txt -o ' + outdir + ' -prefix ' + output_name + ' -ws ' + str(bootstrap_block_size) + ' -bs ' + str(bootstrap_reps) + ' -np ' + str(num_pops) + '\n')
+                          'python3 ' + self.code_dir + '/FSC2input.py -i ' + recode_dir + output_name + '.repol.concat.txt -o ' + outdir + ' -prefix ' + output_name + ' -ws ' + str(bootstrap_block_size) + ' -bs ' + str(bootstrap_reps) + ' -np ' + str(num_pops) + '\n')
             shfile4.close()
 
             cmd1 = ('sbatch ' + output_name + '.fsc2input.sh')
