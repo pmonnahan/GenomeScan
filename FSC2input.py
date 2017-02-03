@@ -17,8 +17,7 @@ from functools import reduce
 def generateFSC2input(input_file, output, outname, numpops, window_size, num_bootstraps):
 
 
-
-    scaff_lengths = [33684748, 19642879, 24872290, 23717143, 21575646, 25532148, 25060017, 23333815]
+    scaff_lengths = [33684748, 19642879, 24872290, 23717143, 21575646, 25532148, 25060017, 23333815]  # Scaffold lengths determined from alygenomes.fasta
     num_winds = sum([float(x) / float(window_size) for x in scaff_lengths])
     per_scaff = [int(math.ceil(float(x) / float(window_size))) for x in scaff_lengths]
     wind_counts = []
@@ -90,11 +89,11 @@ def generateFSC2input(input_file, output, outname, numpops, window_size, num_boo
             out.write(str(string))
 
         if pos == old_pos:  # Accruing information from multiple populations but same locus
-            Locus.append(line)
             try:
-                line.remove("-9")
+                line.remove("-9")  # Skip population if it has any missing data
             except ValueError:
                 ac_i.append(int(ac))
+                Locus.append(line)
         elif len(ac_i) == numpops:  # Skip locus calc if data not present from all populations
             snp_count += 1
             scaff_num = int(Locus[0][2].split("_")[1])
@@ -102,17 +101,21 @@ def generateFSC2input(input_file, output, outname, numpops, window_size, num_boo
             wind_num = sum(per_scaff[:scaff_num - 1]) + int(math.ceil(cur_pos / float(window_size))) - 1
             # print(wind_num, sum(per_scaff[:scaff_num - 1]), int(math.ceil(cur_pos / float(window_size))))
             list_pos = 0
+            list_pos1 = 0
             for jj, aa in enumerate(ac_i):
-                    list_pos += aa * reduce(mul, [len(x) for x in states_i[jj + 1:]], 1)
+                list_pos += aa * reduce(mul, [len(x) for x in states_i[jj + 1:]], 1)  # Formula to calculate position in list to given ac_i state =[x,y,z] is (x * [ANy + 1] * [ANz + 1]) + (y * [ANz + 1) + z
             dsfs[list_pos] += 1
-            for j, rep in enumerate(wind_counts): 
+            for j, rep in enumerate(wind_counts):
                 for samp_num in range(0, rep[wind_num]):  # write site according to random number of times the window in which this site resides was chosen
                     DSFS[str(j)][list_pos] += 1
             ac_i = []
-            ac_i.append(int(ac))
             Locus = []
-            Locus.append(line)
             old_pos = pos
+            try:
+                line.remove("-9")
+            except ValueError:
+                ac_i.append(int(ac))
+                Locus.append(line)
 
 
         else:  # Previous site contained data from only one population, so skip calculations
@@ -123,7 +126,7 @@ def generateFSC2input(input_file, output, outname, numpops, window_size, num_boo
             old_pos = pos
 
     for state in range(num_states):
-        out.write(str(dsfs[state] + "\t"))
+        out.write(str(dsfs[state]) + "\t")
         for rep in range(0, num_bootstraps):
             entry = DSFS[str(rep)][state]
             entry = str(entry) + "\t"
